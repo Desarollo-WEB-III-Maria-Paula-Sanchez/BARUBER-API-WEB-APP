@@ -9,7 +9,7 @@ export const verificarToken = async (req, res, next) => {
       return res.status(401).json({ error: "Token requerido" });
     }
 
-    // Validar token con anon key
+    // Validar token
     const { data, error } = await supabase.auth.getUser(token);
 
     if (error || !data?.user) {
@@ -18,7 +18,7 @@ export const verificarToken = async (req, res, next) => {
 
     req.user = data.user;
 
-    // Obtener perfil desde usuarios, usando SERVICE ROLE (ignora RLS)
+    // Cargar perfil desde tabla usuarios con SERVICE ROLE (ignora RLS)
     const { data: perfil, error: perfilError } = await supabaseAdmin
       .from("usuarios")
       .select("*")
@@ -43,6 +43,7 @@ export const verificarToken = async (req, res, next) => {
   }
 };
 
+// Middleware que solo permite BARBEROS
 export const soloBarbero = (req, res, next) => {
   if (!req.user?.perfil || req.user.perfil.rol !== "barbero") {
     return res.status(403).json({ error: "Solo barberos" });
@@ -50,6 +51,7 @@ export const soloBarbero = (req, res, next) => {
   next();
 };
 
+// Solo superadmins
 export const soloSuperadmin = (req, res, next) => {
   if (!req.user?.perfil || req.user.perfil.rol !== "superadmin") {
     return res.status(403).json({ error: "Solo superadmins" });
