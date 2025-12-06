@@ -7,19 +7,39 @@ import {
   obtenerSesion,
   registrarBarbero,
   loginGoogleBarbero,
-  googleCallbackBarbero,
 } from "../controllers/auth.controller.js";
+
 import { verificarToken } from "../middlewares/auth.js";
 
 const router = express.Router();
 
+/* ============================================================
+    LOGIN Y REGISTRO POR EMAIL
+============================================================ */
 router.post("/login", loginEmail);
-router.get("/google", loginGoogle);
 router.post("/registro", registrar);
-router.post("/refresh", refrescarToken);
-router.get("/me", verificarToken, obtenerSesion);
 router.post("/registro-barbero", registrarBarbero);
+
+/* ============================================================
+    LOGIN GOOGLE CLIENTE
+============================================================ */
+router.get("/google", loginGoogle);
+
+/* ============================================================
+    LOGIN GOOGLE BARBERO (IMPLICIT FLOW)
+    → redirige a Google
+    → Google vuelve al frontend con #access_token=...
+============================================================ */
 router.get("/google-barbero", loginGoogleBarbero);
-router.get("/google-barbero/callback", googleCallbackBarbero);
+
+/* ============================================================
+    TOKENS
+============================================================ */
+router.post("/refresh", refrescarToken);
+
+/* ============================================================
+    SESIÓN DEL USUARIO
+============================================================ */
+router.get("/me", verificarToken, obtenerSesion);
 
 export default router;

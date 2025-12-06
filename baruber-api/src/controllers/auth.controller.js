@@ -3,7 +3,7 @@ import { supabaseAdmin } from "../utils/supabaseAdmin.js";
 
 /* ============================================================
     LOGIN EMAIL (clientes y barberos)
-   ============================================================ */
+============================================================ */
 export const loginEmail = async (req, res) => {
   const { email, password } = req.body;
 
@@ -22,16 +22,14 @@ export const loginEmail = async (req, res) => {
 };
 
 /* ============================================================
-    LOGIN GOOGLE (solo clientes)
-   ============================================================ */
+    LOGIN GOOGLE CLIENTE (flujo normal)
+============================================================ */
 export const loginGoogle = async (req, res) => {
-  const { redirect_to } = req.query;
+  const redirectTo = "http://localhost:5173/login";
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
-    options: {
-      redirectTo: redirect_to || "http://localhost:3000/auth/callback",
-    },
+    options: { redirectTo }
   });
 
   if (error) return res.status(400).json(error);
@@ -40,24 +38,20 @@ export const loginGoogle = async (req, res) => {
 };
 
 /* ============================================================
-    REGISTRO CLIENTE (rol = cliente)
-   ============================================================ */
+    REGISTRO CLIENTE
+============================================================ */
 export const registrar = async (req, res) => {
   const { email, password, nombre } = req.body;
 
-  // Registrar usuario en Supabase Auth
   const { data, error } = await supabase.auth.signUp({ email, password });
-
   if (error) return res.status(400).json(error);
 
   const userId = data.user.id;
 
-  // Confirmar email automáticamente
   await supabaseAdmin.auth.admin.updateUserById(userId, {
     email_confirmed_at: new Date().toISOString(),
   });
 
-  // Insertar en tabla usuarios
   const { error: insertError } = await supabase.from("usuarios").insert({
     id: userId,
     email,
@@ -75,18 +69,16 @@ export const registrar = async (req, res) => {
 };
 
 /* ============================================================
-    REGISTRO BARBERO (rol = barbero)
-   ============================================================ */
+    REGISTRO BARBERO
+============================================================ */
 export const registrarBarbero = async (req, res) => {
   const { email, password, nombre } = req.body;
 
   const { data, error } = await supabase.auth.signUp({ email, password });
-
   if (error) return res.status(400).json(error);
 
   const userId = data.user.id;
 
-  // Auto-confirmación de correo
   await supabaseAdmin.auth.admin.updateUserById(userId, {
     email_confirmed_at: new Date().toISOString(),
   });
@@ -107,17 +99,20 @@ export const registrarBarbero = async (req, res) => {
 };
 
 /* ============================================================
-    LOGIN GOOGLE BARBERO (solo web barbero)
-   ============================================================ */
+    LOGIN GOOGLE BARBERO (INICIA OAUTH)
+    IMPORTANTE: flowType: "pkce" → evita #access_token
+============================================================ */
 export const loginGoogleBarbero = async (req, res) => {
-  const { redirect_to } = req.query;
-
-  const callbackUrl =
-    redirect_to || "http://localhost:3000/api/auth/google-barbero/callback";
+  // Redirige directamente al frontend, no al backend
+  const FRONTEND_CALLBACK = "http://localhost:5173/dashboard";
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
-    options: { redirectTo: callbackUrl },
+    options: {
+      redirectTo: FRONTEND_CALLBACK,
+      // NO uses flowType: "pkce" aquí
+      scopes: "openid email profile",
+    },
   });
 
   if (error) return res.status(400).json(error);
@@ -125,57 +120,84 @@ export const loginGoogleBarbero = async (req, res) => {
   return res.json({ url: data.url });
 };
 
+
 /* ============================================================
-    CALLBACK GOOGLE BARBERO → asigna rol barbero
-   ============================================================ */
+    CALLBACK GOOGLE BARBERO
+    Aquí llega Google → Supabase transforma CODE → token
+    Luego insertamos usuario si es nuevo
+============================================================ */
 export const googleCallbackBarbero = async (req, res) => {
-  const token = req.query.token;
+  try {
+    const code = req.query.code;
 
-  const { data, error } = await supabase.auth.getUser(token);
+    if (!code) {
+      console.error("❌ No llegó 'code' en el callback");
+      return res.redirect("http://localhost:5173/login?error=no_code");
+    }
 
-  if (error) return res.redirect("http://localhost:5173/login?error=google");
+    // INTERCAMBIAR CODE POR TOKEN MEDIANTE OAUTH BACKEND
+    const resp = await fetch(
+      "https://xuogfwkdkwycumlscyna.supabase.co/auth/v1/token?grant_type=authorization_code",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: process.env.SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({
+          code,
+          redirect_uri: "http://localhost:3000/auth/google-barbero/callback",
+        }),
+      }
+    );
 
-  const user = data.user;
+    const tokens = await resp.json();
 
-  // Verificar si el perfil ya existe
-  const { data: perfil } = await supabase
-    .from("usuarios")
-    .select("*")
-    .eq("id", user.id)
-    .maybeSingle();
+    if (!tokens.access_token) {
+      console.error("❌ No se obtuvo access_token:", tokens);
+      return res.redirect("http://localhost:5173/login?error=invalid_code");
+    }
 
-  // Si no existe → crearlo como barbero
-  if (!perfil) {
-    await supabaseAdmin.from("usuarios").insert({
-      id: user.id,
-      email: user.email,
-      nombre: user.user_metadata.full_name,
-      rol: "barbero",
-    });
+    const token = tokens.access_token;
+
+    // Obtener datos del usuario con ese token
+    const { data, error } = await supabase.auth.getUser(token);
+
+    if (error || !data?.user) {
+      console.error("❌ Error obteniendo usuario:", error);
+      return res.redirect("http://localhost:5173/login?error=user_not_found");
+    }
+
+    const user = data.user;
+
+    // Buscar perfil en BD
+    const { data: perfil } = await supabase
+      .from("usuarios")
+      .select("*")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (!perfil) {
+      await supabaseAdmin.from("usuarios").insert({
+        id: user.id,
+        email: user.email,
+        nombre: user.user_metadata.full_name,
+        rol: "barbero",
+      });
+    }
+
+    return res.redirect(`http://localhost:5173/dashboard?access_token=${token}`);
+  } catch (err) {
+    console.error("❌ Error en callback Google:", err);
+    return res.redirect("http://localhost:5173/login?error=callback_crash");
   }
-
-  // Redirigir al frontend del barbero con token
-  return res.redirect(`http://localhost:5173/dashboard?access_token=${token}`);
 };
 
-/* ============================================================
-    REFRESCAR TOKEN
-   ============================================================ */
-export const refrescarToken = async (req, res) => {
-  const { refresh_token } = req.body;
 
-  const { data, error } = await supabase.auth.refreshSession({
-    refresh_token,
-  });
-
-  if (error) return res.status(400).json(error);
-
-  return res.json(data);
-};
 
 /* ============================================================
-    OBTENER SESIÓN (requiere verificarToken middleware)
-   ============================================================ */
+    OBTENER SESIÓN
+============================================================ */
 export const obtenerSesion = async (req, res) => {
   try {
     return res.json({
@@ -186,10 +208,25 @@ export const obtenerSesion = async (req, res) => {
         rol: req.user.perfil.rol,
         telefono: req.user.perfil.telefono,
         foto: req.user.perfil.foto,
-      }
+      },
     });
   } catch (err) {
     console.error("Error en obtenerSesion:", err);
     return res.status(500).json({ error: "Error obteniendo sesión" });
   }
+};
+
+/* ============================================================
+    REFRESCAR TOKEN
+============================================================ */
+export const refrescarToken = async (req, res) => {
+  const { refresh_token } = req.body;
+
+  const { data, error } = await supabase.auth.refreshSession({
+    refresh_token,
+  });
+
+  if (error) return res.status(400).json(error);
+
+  return res.json(data);
 };

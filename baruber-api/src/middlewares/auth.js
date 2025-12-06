@@ -30,11 +30,33 @@ export const verificarToken = async (req, res, next) => {
       return res.status(500).json({ error: "Error obteniendo perfil" });
     }
 
+    // 🔥 SI NO EXISTE EL PERFIL, CRÉALO AUTOMÁTICAMENTE
     if (!perfil) {
-      return res.status(404).json({ error: "Perfil no encontrado" });
-    }
+      console.log("📝 Creando perfil automáticamente para:", req.user.email);
+      
+      const { data: nuevoPerfil, error: insertError } = await supabaseAdmin
+        .from("usuarios")
+        .insert({
+          id: req.user.id,
+          email: req.user.email,
+          nombre: req.user.user_metadata?.full_name || req.user.email?.split('@')[0],
+          rol: "barbero",
+          foto_url: req.user.user_metadata?.avatar_url || null, // 👈 foto_url
+          telefono: null,
+        })
+        .select()
+        .single();
 
-    req.user.perfil = perfil;
+      if (insertError) {
+        console.error("Error creando perfil:", insertError);
+        return res.status(500).json({ error: "Error creando perfil" });
+      }
+
+      req.user.perfil = nuevoPerfil;
+      console.log("✅ Perfil creado exitosamente");
+    } else {
+      req.user.perfil = perfil;
+    }
 
     next();
   } catch (err) {

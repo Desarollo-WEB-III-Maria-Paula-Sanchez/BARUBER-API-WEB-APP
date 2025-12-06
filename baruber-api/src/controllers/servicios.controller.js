@@ -4,151 +4,255 @@ import multer from "multer";
 
 const upload = multer();
 
+/* ============================================================
+    SERVICIOS - CRUD
+============================================================ */
+
 export const crearServicio = async (req, res) => {
-  const barber_id = req.user.id;
-  const { nombre, descripcion, precio, duracion, foto_url } = req.body;
+  try {
+    const barber_id = req.user.id;
+    const { nombre, descripcion, precio, duracion, foto_url } = req.body;
 
-  const { data, error } = await supabase
-    .from("servicios")
-    .insert([{ barber_id, nombre, descripcion, precio, duracion, foto_url }])
-    .select()
-    .single();
+    console.log("📝 Creando servicio:", { barber_id, nombre, precio, duracion });
 
-  if (error) return res.status(400).json(error);
+    // Usar supabaseAdmin para evitar problemas de RLS
+    const { data, error } = await supabaseAdmin
+      .from("servicios")
+      .insert([
+        {
+          barber_id,
+          nombre,
+          descripcion,
+          precio: Number(precio),
+          duracion: Number(duracion),
+          foto_url: foto_url || null,
+        },
+      ])
+      .select()
+      .single();
 
-  res.json(data);
+    if (error) {
+      console.error("❌ Error creando servicio:", error);
+      return res.status(400).json({ error: error.message });
+    }
+
+    console.log("✅ Servicio creado:", data);
+    res.json(data);
+  } catch (err) {
+    console.error("❌ Error en crearServicio:", err);
+    res.status(500).json({ error: "Error interno del servidor" });
+  }
 };
 
 export const obtenerServiciosBarbero = async (req, res) => {
-  const barber_id = req.params.barber_id;
+  try {
+    const barber_id = req.params.barber_id;
 
-  const { data, error } = await supabase
-    .from("servicios")
-    .select("*")
-    .eq("barber_id", barber_id);
+    const { data, error } = await supabase
+      .from("servicios")
+      .select("*")
+      .eq("barber_id", barber_id)
+      .order("created_at", { ascending: false });
 
-  if (error) return res.status(400).json(error);
+    if (error) return res.status(400).json({ error: error.message });
 
-  res.json(data);
+    res.json(data);
+  } catch (err) {
+    console.error("Error obteniendo servicios:", err);
+    res.status(500).json({ error: "Error interno del servidor" });
+  }
 };
-
-export const eliminarServicio = async (req, res) => {
-  const id = req.params.id;
-
-  const { error } = await supabase
-    .from("servicios")
-    .delete()
-    .eq("id", id);
-
-  if (error) return res.status(400).json(error);
-
-  res.json({ message: "Servicio eliminado" });
-};
-
-/* =======================
-   NUEVOS ENDPOINTS
-   ======================= */
 
 export const obtenerServicioPorId = async (req, res) => {
-  const { id } = req.params;
+  try {
+    const { id } = req.params;
 
-  const { data, error } = await supabase
-    .from("servicios")
-    .select("*")
-    .eq("id", id)
-    .maybeSingle();
+    const { data, error } = await supabase
+      .from("servicios")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
 
-  if (error) return res.status(400).json(error);
+    if (error) return res.status(400).json({ error: error.message });
+    if (!data) return res.status(404).json({ error: "Servicio no encontrado" });
 
-  res.json(data);
+    res.json(data);
+  } catch (err) {
+    console.error("Error obteniendo servicio:", err);
+    res.status(500).json({ error: "Error interno del servidor" });
+  }
 };
 
 export const actualizarServicio = async (req, res) => {
-  const { id } = req.params;
-  const { nombre, descripcion, precio, duracion } = req.body;
+  try {
+    const { id } = req.params;
+    const barber_id = req.user.id;
+    const { nombre, descripcion, precio, duracion } = req.body;
 
-  const { data, error } = await supabase
-    .from("servicios")
-    .update({
-      nombre,
-      descripcion,
-      precio,
-      duracion,
-    })
-    .eq("id", id)
-    .select()
-    .single();
+    const { data, error } = await supabaseAdmin
+      .from("servicios")
+      .update({
+        nombre,
+        descripcion,
+        precio: Number(precio),
+        duracion: Number(duracion),
+      })
+      .eq("id", id)
+      .eq("barber_id", barber_id)
+      .select()
+      .single();
 
-  if (error) return res.status(400).json(error);
+    if (error) return res.status(400).json({ error: error.message });
 
-  res.json({
-    message: "Servicio actualizado",
-    data,
-  });
-};
-
-export const subirImagenServicio = async (req, res) => {
-  const { id } = req.params;
-  const file = req.file;
-
-  if (!file) {
-    return res.status(400).json({ error: "Archivo requerido" });
+    res.json({
+      message: "Servicio actualizado",
+      data,
+    });
+  } catch (err) {
+    console.error("Error actualizando servicio:", err);
+    res.status(500).json({ error: "Error interno del servidor" });
   }
-
-  const filename = `${id}-${Date.now()}.jpg`;
-
-  const { error: uploadError } = await supabaseAdmin.storage
-    .from("servicios")
-    .upload(filename, file.buffer, {
-      contentType: file.mimetype,
-      upsert: true,
-    });
-
-  if (uploadError) return res.status(400).json(uploadError);
-
-  const { data: urlData } = supabaseAdmin.storage
-    .from("servicios")
-    .getPublicUrl(filename);
-
-  await supabase
-    .from("servicios")
-    .update({ foto_url: urlData.publicUrl })
-    .eq("id", id);
-
-  res.json({
-    message: "Imagen subida",
-    url: urlData.publicUrl,
-  });
 };
 
+export const eliminarServicio = async (req, res) => {
+  try {
+    const id = req.params.id;
+    const barber_id = req.user.id;
+
+    // Solo puede eliminar sus propios servicios
+    const { error } = await supabaseAdmin
+      .from("servicios")
+      .delete()
+      .eq("id", id)
+      .eq("barber_id", barber_id);
+
+    if (error) return res.status(400).json({ error: error.message });
+
+    res.json({ message: "Servicio eliminado" });
+  } catch (err) {
+    console.error("Error eliminando servicio:", err);
+    res.status(500).json({ error: "Error interno del servidor" });
+  }
+};
+
+/* ============================================================
+    SUBIR FOTO DE SERVICIO (multer)
+============================================================ */
+export const subirImagenServicio = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const barber_id = req.user.id;
+    const file = req.file;
+
+    if (!file) {
+      return res.status(400).json({ error: "Archivo requerido" });
+    }
+
+    // Verificar que el servicio pertenece al barbero
+    const { data: servicio } = await supabaseAdmin
+      .from("servicios")
+      .select("barber_id")
+      .eq("id", id)
+      .single();
+
+    if (!servicio || servicio.barber_id !== barber_id) {
+      return res.status(403).json({ error: "No autorizado" });
+    }
+
+    const filename = `servicio-${id}-${Date.now()}.jpg`;
+
+    const { error: uploadError } = await supabaseAdmin.storage
+      .from("servicios")
+      .upload(filename, file.buffer, {
+        contentType: file.mimetype,
+        upsert: true,
+      });
+
+    if (uploadError) {
+      console.error("Error subiendo a storage:", uploadError);
+      return res.status(400).json({ error: uploadError.message });
+    }
+
+    const { data: urlData } = supabaseAdmin.storage
+      .from("servicios")
+      .getPublicUrl(filename);
+
+    await supabaseAdmin
+      .from("servicios")
+      .update({ foto_url: urlData.publicUrl })
+      .eq("id", id);
+
+    res.json({
+      message: "Imagen subida exitosamente",
+      url: urlData.publicUrl,
+    });
+  } catch (err) {
+    console.error("Error subiendo imagen:", err);
+    res.status(500).json({ error: "Error interno del servidor" });
+  }
+};
+
+/* ============================================================
+    SUBIR FOTO DE PERFIL DEL BARBERO (multer)
+============================================================ */
 export const subirFotoPerfil = async (req, res) => {
-  const userId = req.user.id;
-  const file = req.file;
+  try {
+    const userId = req.user.id;
+    const file = req.file;
 
-  if (!file) return res.status(400).json({ error: "Archivo requerido" });
+    if (!file) {
+      return res.status(400).json({ error: "Archivo requerido" });
+    }
 
-  const filename = `${userId}-${Date.now()}.jpg`;
+    const filename = `avatar-${userId}-${Date.now()}.jpg`;
 
-  const { error: uploadError } = await supabaseAdmin.storage
-    .from("avatars")
-    .upload(filename, file.buffer, {
-      contentType: file.mimetype,
-      upsert: true,
+    const { error: uploadError } = await supabaseAdmin.storage
+      .from("avatars")
+      .upload(filename, file.buffer, {
+        contentType: file.mimetype,
+        upsert: true,
+      });
+
+    if (uploadError) {
+      console.error("Error subiendo avatar:", uploadError);
+      return res.status(400).json({ error: uploadError.message });
+    }
+
+    const { data: urlData } = supabaseAdmin.storage
+      .from("avatars")
+      .getPublicUrl(filename);
+
+    await supabaseAdmin
+      .from("usuarios")
+      .update({ foto_url: urlData.publicUrl })
+      .eq("id", userId);
+
+    res.json({
+      message: "Foto de perfil actualizada",
+      url: urlData.publicUrl,
     });
-
-  if (uploadError) return res.status(400).json(uploadError);
-
-  const { data: urlData } = supabaseAdmin.storage
-    .from("avatars")
-    .getPublicUrl(filename);
-
-  await supabase
-    .from("usuarios")
-    .update({ foto: urlData.publicUrl })
-    .eq("id", userId);
-
-  res.json({
-    message: "Foto de perfil actualizada",
-    url: urlData.publicUrl,
-  });
+  } catch (err) {
+    console.error("Error subiendo foto de perfil:", err);
+    res.status(500).json({ error: "Error interno del servidor" });
+  }
 };
+
+/* ============================================================
+    OBTENER URL FIRMADA PARA UPLOAD (opcional)
+============================================================ */
+export const uploadFotoServicio = async (req, res) => {
+  try {
+    const { fileName } = req.body;
+
+    const { data, error } = await supabase.storage
+      .from("servicios")
+      .createSignedUploadUrl(fileName);
+
+    if (error) return res.status(400).json({ error: error.message });
+
+    return res.json({ url: data.signedUrl, token: data.token });
+  } catch (err) {
+    console.error("Error creando URL de carga:", err);
+    res.status(500).json({ error: "Error creando URL de carga" });
+  }
+};  
