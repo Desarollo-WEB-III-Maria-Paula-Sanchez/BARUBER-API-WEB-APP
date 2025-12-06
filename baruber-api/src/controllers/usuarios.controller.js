@@ -7,7 +7,8 @@ import { supabaseAdmin } from "../utils/supabaseAdmin.js";
 export const obtenerPerfil = async (req, res) => {
   const userId = req.user.id;
 
-  const { data, error } = await supabase
+  // Usar admin para ignorar RLS
+  const { data, error } = await supabaseAdmin
     .from("usuarios")
     .select("*")
     .eq("id", userId)
@@ -25,20 +26,24 @@ export const actualizarPerfil = async (req, res) => {
   const userId = req.user.id;
   const { nombre, telefono, foto_url } = req.body;
 
-  const { data, error } = await supabase
+  // Usar admin para ignorar RLS
+  const { data, error } = await supabaseAdmin
     .from("usuarios")
-    .update({ nombre, telefono, foto: foto_url })
+    .update({ nombre, telefono, foto_url })
     .eq("id", userId)
     .select()
     .single();
 
-  if (error) return res.status(400).json(error);
+  if (error) {
+    console.error("Error actualizando perfil:", error);
+    return res.status(400).json(error);
+  }
 
   res.json(data);
 };
 
 /* ============================================================
-   Subir foto de perfil — nuevo
+   Subir foto de perfil – nuevo
    ============================================================ */
 export const subirFotoPerfil = async (req, res) => {
   const userId = req.user.id;
@@ -59,20 +64,26 @@ export const subirFotoPerfil = async (req, res) => {
       upsert: true,
     });
 
-  if (uploadError) return res.status(400).json(uploadError);
+  if (uploadError) {
+    console.error("Error subiendo archivo:", uploadError);
+    return res.status(400).json(uploadError);
+  }
 
   // Obtener URL pública
   const { data: urlData } = supabaseAdmin.storage
     .from("avatars")
     .getPublicUrl(filename);
 
-  // Guardar en BD
-  const { error: updateError } = await supabase
+  // Guardar en BD usando admin
+  const { error: updateError } = await supabaseAdmin
     .from("usuarios")
-    .update({ foto: urlData.publicUrl })
+    .update({ foto_url: urlData.publicUrl })
     .eq("id", userId);
 
-  if (updateError) return res.status(400).json(updateError);
+  if (updateError) {
+    console.error("Error actualizando URL en BD:", updateError);
+    return res.status(400).json(updateError);
+  }
 
   res.json({
     message: "Foto actualizada",

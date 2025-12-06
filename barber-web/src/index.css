@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply text-sm sm:text-base;
+  }
+  
+  body {
+    @apply bg-gray-100 text-gray-900;
+  }
+}
+
+@layer components {
+  /* Inputs automáticamente responsive */
+  input, textarea, select {
+    @apply text-sm sm:text-base;
+  }
+  
+  /* Botones automáticamente responsive */
+  button {
+    @apply text-sm sm:text-base;
+  }
+  
+  /* Cards automáticamente responsive */
+  .card {
+    @apply p-4 sm:p-6 lg:p-8;
+  }
+}
