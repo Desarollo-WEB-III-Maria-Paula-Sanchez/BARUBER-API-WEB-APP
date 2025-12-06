@@ -26,13 +26,11 @@ export default function Horarios() {
   const [mensaje, setMensaje] = useState("");
   const [error, setError] = useState("");
 
-  // Obtener los horarios reales del barbero
   const cargarHorarios = async () => {
     try {
       const res = await api.get("/horarios");
       const data = res.data;
 
-      // Si no existen los 7 días, los creamos vacíos
       const diasCompletos: DiaHorario[] = DIAS_SEMANA.map((dia) => {
         const existente = data.find((d: any) => d.dia_semana === dia.valor);
 
@@ -61,9 +59,8 @@ export default function Horarios() {
 
   const cambiarValor = (index: number, campo: keyof DiaHorario, valor: any) => {
     const copiado = [...horarios];
-    
+
     if (campo === "trabaja" && !valor) {
-      // Si desactiva "trabaja", limpiar horarios
       copiado[index] = {
         ...copiado[index],
         trabaja: false,
@@ -76,7 +73,7 @@ export default function Horarios() {
         [campo]: valor,
       };
     }
-    
+
     setHorarios(copiado);
   };
 
@@ -101,15 +98,13 @@ export default function Horarios() {
     setError("");
     setMensaje("");
 
-    if (!validarHorarios()) {
-      return;
-    }
+    if (!validarHorarios()) return;
 
     setSaving(true);
     try {
       await api.put("/horarios/semana", horarios);
       setMensaje("✅ Horarios actualizados con éxito");
-      
+
       setTimeout(() => setMensaje(""), 3000);
     } catch (err: any) {
       console.error("Error guardando horarios:", err);
@@ -137,6 +132,7 @@ export default function Horarios() {
         hora_inicio: primerDia.hora_inicio,
         hora_fin: primerDia.hora_fin,
       }));
+
       setHorarios(copiado);
       setMensaje("Horario copiado a todos los días");
       setTimeout(() => setMensaje(""), 3000);
@@ -145,7 +141,7 @@ export default function Horarios() {
 
   if (loading) {
     return (
-      <div className="p-6 flex justify-center items-center min-h-[400px]">
+      <div className="p-6 flex justify-center items-center min-h-[300px]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Cargando horarios...</p>
@@ -155,11 +151,14 @@ export default function Horarios() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6">
       <div className="max-w-4xl mx-auto">
-        <div className="bg-white shadow-md rounded-lg p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-semibold">Horarios de Atención</h1>
+        <div className="bg-white shadow-md rounded-lg p-4 sm:p-6">
+
+          {/* HEADER */}
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
+            <h1 className="text-xl sm:text-2xl font-semibold">Horarios de Atención</h1>
+
             <button
               onClick={aplicarATodos}
               className="text-sm bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-lg transition"
@@ -167,10 +166,6 @@ export default function Horarios() {
               📋 Copiar lunes a todos
             </button>
           </div>
-
-          <p className="text-gray-600 mb-6 text-sm">
-            Configura los días y horarios en los que atiendes a tus clientes
-          </p>
 
           {/* Mensajes */}
           {mensaje && (
@@ -185,96 +180,86 @@ export default function Horarios() {
             </div>
           )}
 
-          {/* Tabla de horarios */}
-          <div className="space-y-3">
-            {/* Header */}
-            <div className="grid grid-cols-[140px_100px_1fr_1fr] gap-4 items-center pb-2 border-b-2 font-semibold text-gray-700 text-sm">
-              <div>Día</div>
-              <div>Abierto</div>
-              <div>Hora inicio</div>
-              <div>Hora fin</div>
-            </div>
+          {/* HEADER ESCRITORIO */}
+          <div className="hidden md:grid grid-cols-[140px_100px_1fr_1fr] gap-4 pb-2 border-b-2 font-semibold text-gray-700 text-sm">
+            <div>Día</div>
+            <div>Abierto</div>
+            <div>Hora inicio</div>
+            <div>Hora fin</div>
+          </div>
 
-            {/* Filas */}
+          {/* HORARIOS */}
+          <div className="space-y-4 mt-4">
             {horarios.map((dia, index) => (
               <div
                 key={dia.dia_semana}
-                className={`grid grid-cols-[140px_100px_1fr_1fr] gap-4 items-center py-3 border-b ${
+                className={`border rounded-lg p-4 md:p-0 md:border-0 md:rounded-none md:grid md:grid-cols-[140px_100px_1fr_1fr] gap-4 items-center ${
                   !dia.trabaja ? "bg-gray-50" : ""
                 }`}
               >
-                {/* Nombre del día */}
-                <p className="font-medium text-gray-800">
+                <div className="font-medium text-gray-800 mb-2 md:mb-0">
                   {DIAS_SEMANA[index].nombre}
-                </p>
+                </div>
 
-                {/* Checkbox trabaja */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 mb-2 md:mb-0">
                   <input
                     type="checkbox"
                     checked={dia.trabaja}
-                    onChange={(e) =>
-                      cambiarValor(index, "trabaja", e.target.checked)
-                    }
-                    className="w-4 h-4 text-blue-600 cursor-pointer"
+                    onChange={(e) => cambiarValor(index, "trabaja", e.target.checked)}
+                    className="w-4 h-4 text-blue-600"
                   />
-                  <span className="text-sm text-gray-600">
-                    {dia.trabaja ? "Sí" : "No"}
-                  </span>
+                  <span className="text-sm text-gray-600">{dia.trabaja ? "Sí" : "No"}</span>
                 </div>
 
-                {/* Hora inicio */}
-                <input
-                  type="time"
-                  disabled={!dia.trabaja}
-                  value={dia.hora_inicio || ""}
-                  className={`border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    !dia.trabaja
-                      ? "bg-gray-100 cursor-not-allowed text-gray-400"
-                      : ""
-                  }`}
-                  onChange={(e) =>
-                    cambiarValor(index, "hora_inicio", e.target.value)
-                  }
-                />
+                <div>
+                  <label className="md:hidden text-xs text-gray-500">Hora inicio</label>
+                  <input
+                    type="time"
+                    disabled={!dia.trabaja}
+                    value={dia.hora_inicio || ""}
+                    className={`w-full border rounded-lg px-3 py-2 ${
+                      !dia.trabaja ? "bg-gray-100 text-gray-400" : ""
+                    }`}
+                    onChange={(e) => cambiarValor(index, "hora_inicio", e.target.value)}
+                  />
+                </div>
 
-                {/* Hora fin */}
-                <input
-                  type="time"
-                  disabled={!dia.trabaja}
-                  value={dia.hora_fin || ""}
-                  className={`border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    !dia.trabaja
-                      ? "bg-gray-100 cursor-not-allowed text-gray-400"
-                      : ""
-                  }`}
-                  onChange={(e) =>
-                    cambiarValor(index, "hora_fin", e.target.value)
-                  }
-                />
+                <div>
+                  <label className="md:hidden text-xs text-gray-500">Hora fin</label>
+                  <input
+                    type="time"
+                    disabled={!dia.trabaja}
+                    value={dia.hora_fin || ""}
+                    className={`w-full border rounded-lg px-3 py-2 ${
+                      !dia.trabaja ? "bg-gray-100 text-gray-400" : ""
+                    }`}
+                    onChange={(e) => cambiarValor(index, "hora_fin", e.target.value)}
+                  />
+                </div>
               </div>
             ))}
           </div>
 
-          {/* Botón guardar */}
-          <div className="mt-6 flex justify-end gap-3">
+          {/* BOTONES */}
+          <div className="mt-6 flex flex-col sm:flex-row justify-end gap-3">
             <button
               onClick={cargarHorarios}
               disabled={saving}
-              className="bg-gray-200 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-300 transition font-medium disabled:bg-gray-100"
+              className="bg-gray-200 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-300"
             >
               Cancelar
             </button>
+
             <button
               onClick={guardarSemana}
               disabled={saving}
-              className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition font-medium disabled:bg-gray-400 disabled:cursor-not-allowed"
+              className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
             >
               {saving ? "Guardando..." : "💾 Guardar cambios"}
             </button>
           </div>
 
-          {/* Información adicional */}
+          {/* CONSEJITOS */}
           <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
             <ul className="text-sm text-blue-800 space-y-1">
               <li>• Los clientes solo podrán reservar en los días y horarios marcados como abiertos</li>
@@ -282,6 +267,7 @@ export default function Horarios() {
               <li>• Las reservas existentes no se verán afectadas por cambios de horario</li>
             </ul>
           </div>
+
         </div>
       </div>
     </div>
