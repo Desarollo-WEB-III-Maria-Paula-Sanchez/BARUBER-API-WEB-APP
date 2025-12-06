@@ -5,7 +5,8 @@ import {
   crearReserva, 
   cambiarEstado,
   obtenerReservasCliente,
-  obtenerReservasBarbero
+  obtenerReservasBarbero,
+  obtenerReservaPorId
 } from "../controllers/reservas.controller.js";
 
 const router = express.Router();
@@ -23,15 +24,23 @@ router.post("/", verificarToken, crearReserva);
 router.put("/estado", verificarToken, soloBarbero, cambiarEstado);
 
 /**
- * Obtener reservas de un cliente
- * GET /reservas/cliente/:id
+ * Obtener reservas del cliente autenticado
+ * GET /reservas/cliente
+ * (antes era /cliente/:id — inseguro)
  */
-router.get("/cliente/:id", verificarToken, obtenerReservasCliente);
+router.get("/cliente", verificarToken, obtenerReservasCliente);
 
 /**
- * Obtener reservas de un barbero
- * GET /reservas/barbero/:id
+ * Obtener reservas del barbero autenticado
+ * GET /reservas/barbero
+ * (antes era /barbero/:id — inseguro)
  */
-router.get("/barbero/:id", verificarToken, soloBarbero, obtenerReservasBarbero);
+router.get("/barbero", verificarToken, soloBarbero, obtenerReservasBarbero);
+
+/**
+ * Obtener una reserva por ID (solo barbero dueño)
+ * GET /reservas/:id
+ */
+router.get("/:id", verificarToken, soloBarbero, obtenerReservaPorId);
 
 export default router;
