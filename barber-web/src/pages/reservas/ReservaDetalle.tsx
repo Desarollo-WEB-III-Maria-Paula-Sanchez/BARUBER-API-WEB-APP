@@ -187,8 +187,15 @@ export default function ReservaDetalle() {
 
       <div className="bg-white shadow-lg rounded-lg overflow-hidden">
         <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-4 sm:p-6 text-white">
-          <h1 className="text-xl sm:text-2xl font-bold mb-2">Detalle de Reserva</h1>
-          <p className="text-blue-100 text-xs sm:text-sm">ID: {reserva.id}</p>
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold mb-2">Detalle de Reserva</h1>
+              <p className="text-blue-100 text-xs sm:text-sm">ID: {reserva.id}</p>
+            </div>
+            <span className={`${getEstadoColor(reserva.estado)} text-white px-3 py-1 rounded-full text-xs font-semibold`}>
+              {reserva.estado.toUpperCase()}
+            </span>
+          </div>
         </div>
 
         <div className="p-4 sm:p-6 space-y-6">
