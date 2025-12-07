@@ -1,67 +1,28 @@
 import express from "express";
-import { verificarToken, soloBarbero } from "../middlewares/auth.js";
-import { 
-  crearReserva, 
+import {
+  crearReserva,
   cambiarEstado,
   obtenerReservasCliente,
   obtenerReservasBarbero,
   obtenerReservaPorId,
   obtenerHorariosDisponibles,
   reagendarReserva,
-  cancelarReservaCliente
+  cancelarReservaCliente  //
 } from "../controllers/reservas.controller.js";
+import { authMiddleware } from "../middleware/auth.middleware.js"; //
 
 const router = express.Router();
 
-/* ============================================================
-   RUTAS PARA CLIENTES
-   ============================================================ */
+// ===== RUTAS PARA CLIENTES =====
+router.post("/", authMiddleware, crearReserva);
+router.get("/cliente", authMiddleware, obtenerReservasCliente);
+router.get("/disponibles", obtenerHorariosDisponibles); // Pública
+router.put("/cancelar", authMiddleware, cancelarReservaCliente); // ✅ Nueva ruta
 
-/**
- * Obtener horarios disponibles (cliente)
- * GET /reservas/disponibles?barber_id=xxx&servicio_id=xxx&fecha=2025-12-15
- */
-router.get("/disponibles", verificarToken, obtenerHorariosDisponibles);
-
-/**
- * Crear reserva (cliente)
- * POST /reservas/
- */
-router.post("/", verificarToken, crearReserva);
-
-/**
- * Obtener reservas del cliente autenticado
- * GET /reservas/cliente
- */
-router.get("/cliente", verificarToken, obtenerReservasCliente);
-router.put("/cancelar", authMiddleware, cancelarReservaCliente);
-
-/* ============================================================
-   RUTAS PARA BARBEROS
-   ============================================================ */
-
-/**
- * Cambiar estado de reserva (barbero)
- * PUT /reservas/estado
- */
-router.put("/estado", verificarToken, soloBarbero, cambiarEstado);
-
-/**
- * Reagendar reserva (barbero)
- * PUT /reservas/reagendar
- */
-router.put("/reagendar", verificarToken, soloBarbero, reagendarReserva);
-
-/**
- * Obtener reservas del barbero autenticado
- * GET /reservas/barbero
- */
-router.get("/barbero", verificarToken, soloBarbero, obtenerReservasBarbero);
-
-/**
- * Obtener una reserva por ID (solo barbero dueño)
- * GET /reservas/:id
- */
-router.get("/:id", verificarToken, soloBarbero, obtenerReservaPorId);
+// ===== RUTAS PARA BARBEROS =====
+router.get("/barbero", authMiddleware, obtenerReservasBarbero);
+router.get("/:id", authMiddleware, obtenerReservaPorId);
+router.put("/estado", authMiddleware, cambiarEstado);
+router.put("/reagendar", authMiddleware, reagendarReserva);
 
 export default router;
