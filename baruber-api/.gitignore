@@ -1,0 +1,6 @@
+.env.local
+.env.*.local
+node_modules/
+logs
+*.log
+.DS_Store" > .gitignore
