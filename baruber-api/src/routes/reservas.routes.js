@@ -1,37 +1,45 @@
 import express from "express";
-import { verificarToken, soloBarbero } from "../middlewares/auth.js";
-
-import { 
-  crearReserva, 
+import {
+  crearReserva,
   cambiarEstado,
   obtenerReservasCliente,
-  obtenerReservasBarbero
+  obtenerReservasBarbero,
+  obtenerReservaPorId,
+  obtenerHorariosDisponibles,
+  reagendarReserva,
+  cancelarReservaCliente
 } from "../controllers/reservas.controller.js";
+
+import { verificarToken, soloBarbero } from "../middlewares/auth.js";
 
 const router = express.Router();
 
-/**
- * Crear reserva (cliente)
- * POST /reservas/
- */
+// ===== RUTAS PARA CLIENTES =====
+
+// Crear reserva
 router.post("/", verificarToken, crearReserva);
 
-/**
- * Cambiar estado de reserva (barbero)
- * PUT /reservas/estado
- */
+// Obtener reservas del cliente autenticado
+router.get("/cliente", verificarToken, obtenerReservasCliente);
+
+// Obtener horarios disponibles (PÚBLICA)
+router.get("/disponibles", obtenerHorariosDisponibles);
+
+// Cancelar reserva (cliente autenticado)
+router.put("/cancelar", verificarToken, cancelarReservaCliente);
+
+// ===== RUTAS PARA BARBEROS =====
+
+// Obtener reservas del barbero autenticado
+router.get("/barbero", verificarToken, soloBarbero, obtenerReservasBarbero);
+
+// Obtener reserva por ID
+router.get("/:id", verificarToken, obtenerReservaPorId);
+
+// Cambiar estado de una reserva
 router.put("/estado", verificarToken, soloBarbero, cambiarEstado);
 
-/**
- * Obtener reservas de un cliente
- * GET /reservas/cliente/:id
- */
-router.get("/cliente/:id", verificarToken, obtenerReservasCliente);
-
-/**
- * Obtener reservas de un barbero
- * GET /reservas/barbero/:id
- */
-router.get("/barbero/:id", verificarToken, soloBarbero, obtenerReservasBarbero);
+// Reagendar reserva
+router.put("/reagendar", verificarToken, soloBarbero, reagendarReserva);
 
 export default router;

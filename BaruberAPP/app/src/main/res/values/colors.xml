@@ -1,0 +1,50 @@
+<!-- res/values/colors.xml -->
+<resources>
+
+    <!-- Colores Primarios -->
+    <color name="primary">#2563EB</color>
+    <color name="primary_dark">#1E40AF</color>
+    <color name="primary_light">#60A5FA</color>
+
+    <!-- Material Theme Colors (para themes.xml) -->
+    <color name="purple_500">#6200EE</color>
+    <color name="purple_700">#3700B3</color>
+    <color name="teal_200">#03DAC5</color>
+    <color name="teal_700">#018786</color>
+
+    <!-- Colores de Acento -->
+    <color name="accent">#10B981</color>
+    <color name="accent_dark">#059669</color>
+
+    <!-- Fondos -->
+    <color name="background">#F8FAFC</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="surface_variant">#F1F5F9</color>
+
+    <!-- Texto -->
+    <color name="text_primary">#1E293B</color>
+    <color name="text_secondary">#64748B</color>
+    <color name="text_tertiary">#94A3B8</color>
+
+    <!-- Estados -->
+    <color name="error">#EF4444</color>
+    <color name="success">#10B981</color>
+    <color name="warning">#F59E0B</color>
+    <color name="info">#3B82F6</color>
+
+    <!-- Otros -->
+    <color name="divider">#E2E8F0</color>
+
+    <!-- Estados de reserva -->
+    <color name="status_pending">#F59E0B</color>
+    <color name="status_accepted">#3B82F6</color>
+    <color name="status_rejected">#EF4444</color>
+    <color name="status_completed">#10B981</color>
+
+    <!-- Colores base -->
+    <color name="black">#000000</color>
+    <color name="white">#FFFFFF</color>
+    <color name="transparent">#00000000</color>
+    <color name="purple_200">#BB86FC</color>
+
+</resources>

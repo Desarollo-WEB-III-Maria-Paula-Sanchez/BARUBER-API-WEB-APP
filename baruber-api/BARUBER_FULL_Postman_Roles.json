@@ -1,331 +1,661 @@
 {
-    "info": {
-        "name": "BARUBER API - Completa con Roles Autom\u00e1ticos",
-        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-    },
-    "variable": [
-        {
-            "key": "base_url",
-            "value": "http://localhost:3000"
-        },
-        {
-            "key": "supabase_url",
-            "value": "https://xuogfwkdkwycumlscyna.supabase.co"
-        },
-        {
-            "key": "anon_key",
-            "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1b2dmd2tka3d5Y3VtbHNjeW5hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ1NTI0MDQsImV4cCI6MjA4MDEyODQwNH0.aR53NWux9j8ocsEMnZgYGWRdA7-Np7NP63HckstXrkU"
-        },
-        {
-            "key": "token",
-            "value": ""
-        },
-        {
-            "key": "barbero_email",
-            "value": "barbero1@baruber.com"
-        },
-        {
-            "key": "cliente_email",
-            "value": "cliente1@baruber.com"
-        },
-        {
-            "key": "barber_id",
-            "value": ""
-        },
-        {
-            "key": "cliente_id",
-            "value": ""
-        },
-        {
-            "key": "servicio_id",
-            "value": ""
-        },
-        {
-            "key": "reserva_id",
-            "value": ""
-        }
-    ],
-    "item": [
-        {
-            "name": "Auth",
-            "item": [
-                {
-                    "name": "Registrar Usuario (Barbero)",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": "{{base_url}}/auth/registro",
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\"email\": \"{{barbero_email}}\", \"password\": \"Barber123!\", \"nombre\": \"Barbero Prueba\"}"
-                        }
-                    }
-                },
-                {
-                    "name": "Registrar Usuario (Cliente)",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": "{{base_url}}/auth/registro",
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\"email\": \"{{cliente_email}}\", \"password\": \"Cliente123!\", \"nombre\": \"Cliente Prueba\"}"
-                        }
-                    }
-                },
-                {
-                    "name": "Login Email/Password",
-                    "event": [
-                        {
-                            "listen": "test",
-                            "script": {
-                                "exec": [
-                                    "var json = pm.response.json();",
-                                    "pm.environment.set('token', json.access_token);",
-                                    "// ROLE DETECTION",
-                                    "var user = json.user;",
-                                    "if(user && user.user_metadata && user.user_metadata.rol){",
-                                    "   var rol = user.user_metadata.rol;",
-                                    "   if(rol === 'barbero'){ pm.environment.set('barber_id', user.id); }",
-                                    "   if(rol === 'cliente'){ pm.environment.set('cliente_id', user.id); }",
-                                    "}"
-                                ]
-                            }
-                        }
-                    ],
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "apikey",
-                                "value": "{{anon_key}}"
-                            },
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": "{{supabase_url}}/auth/v1/token?grant_type=password",
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\"email\": \"{{barbero_email}}\", \"password\": \"Barber123!\"}"
-                        }
-                    }
-                },
-                {
-                    "name": "Obtener Sesi\u00f3n",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
-                            }
-                        ],
-                        "url": "{{base_url}}/auth/me"
-                    }
-                }
-            ]
-        },
-        {
-            "name": "Usuarios",
-            "item": [
-                {
-                    "name": "Obtener Perfil",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
-                            }
-                        ],
-                        "url": "{{base_url}}/usuarios/perfil"
-                    }
-                },
-                {
-                    "name": "Actualizar Perfil",
-                    "request": {
-                        "method": "PUT",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
-                            },
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": "{{base_url}}/usuarios/perfil",
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\"nombre\": \"Nombre Actualizado\", \"telefono\": \"8888-8888\", \"foto_url\": \"https://picsum.photos/200\"}"
-                        }
-                    }
-                }
-            ]
-        },
-        {
-            "name": "Servicios",
-            "item": [
-                {
-                    "name": "Crear Servicio",
-                    "event": [
-                        {
-                            "listen": "test",
-                            "script": {
-                                "exec": [
-                                    "var json = pm.response.json();",
-                                    "pm.environment.set('servicio_id', json.id);"
-                                ]
-                            }
-                        }
-                    ],
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
-                            },
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": "{{base_url}}/servicios",
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\"nombre\": \"Corte Fade\", \"descripcion\": \"Corte moderno\", \"precio\": 8000, \"duracion\": 45}"
-                        }
-                    }
-                },
-                {
-                    "name": "Obtener Servicios del Barbero",
-                    "request": {
-                        "method": "GET",
-                        "url": "{{base_url}}/servicios/{{barber_id}}"
-                    }
-                },
-                {
-                    "name": "Eliminar Servicio",
-                    "request": {
-                        "method": "DELETE",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
-                            }
-                        ],
-                        "url": "{{base_url}}/servicios/{{servicio_id}}"
-                    }
-                }
-            ]
-        },
-        {
-            "name": "Reservas",
-            "item": [
-                {
-                    "name": "Crear Reserva",
-                    "event": [
-                        {
-                            "listen": "test",
-                            "script": {
-                                "exec": [
-                                    "var json = pm.response.json();",
-                                    "pm.environment.set('reserva_id', json.id);"
-                                ]
-                            }
-                        }
-                    ],
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
-                            }
-                        ],
-                        "url": "{{base_url}}/reservas",
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\"barber_id\": \"{{barber_id}}\", \"servicio_id\": \"{{servicio_id}}\", \"fecha\": \"2025-12-01\", \"hora\": \"10:00\"}"
-                        }
-                    }
-                },
-                {
-                    "name": "Cambiar Estado de Reserva",
-                    "request": {
-                        "method": "PUT",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
-                            }
-                        ],
-                        "url": "{{base_url}}/reservas/estado",
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\"reserva_id\": \"{{reserva_id}}\", \"estado\": \"aceptada\"}"
-                        }
-                    }
-                }
-            ]
-        },
-        {
-            "name": "Horarios",
-            "item": [
-                {
-                    "name": "Actualizar Horario",
-                    "request": {
-                        "method": "PUT",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
-                            }
-                        ],
-                        "url": "{{base_url}}/horarios",
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\"dia_semana\": \"lunes\", \"trabaja\": true, \"hora_inicio\": \"09:00\", \"hora_fin\": \"17:00\"}"
-                        }
-                    }
-                }
-            ]
-        },
-        {
-            "name": "Facturas",
-            "item": [
-                {
-                    "name": "Generar Factura",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
-                            }
-                        ],
-                        "url": "{{base_url}}/facturas",
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\"reserva_id\": \"{{reserva_id}}\"}"
-                        }
-                    }
-                }
-            ]
-        }
-    ]
+	"info": {
+		"_postman_id": "75bc7011-a681-465a-b685-a889b771424f",
+		"name": "BARUBER API - COMPLETA (WEB + APP) 2025",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "40081989"
+	},
+	"item": [
+		{
+			"name": "AUTH",
+			"item": [
+				{
+					"name": "Registrar Cliente",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"email\":\"cliente1@test.com\",\"password\":\"Cliente123\",\"nombre\":\"Cliente Uno\"}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/registro",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"registro"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Registrar Barbero",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"email\":\"barbero1@test.com\",\"password\":\"Barbero123\",\"nombre\":\"Barbero Uno\"}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/registro-barbero",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"registro-barbero"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login Email",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var json = pm.response.json();",
+									"pm.environment.set('token', json.access_token);",
+									"if(json.user && json.user.user_metadata){",
+									" if(json.user.user_metadata.rol === 'barbero'){ pm.environment.set('barber_id', json.user.id); }",
+									" if(json.user.user_metadata.rol === 'cliente'){ pm.environment.set('cliente_id', json.user.id); }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"email\":\"barbero1@test.com\",\"password\":\"Barbero123\"}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Obtener Sesión",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/auth/me",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"me"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "USUARIOS",
+			"item": [
+				{
+					"name": "Obtener Perfil",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/usuarios/perfil",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"usuarios",
+								"perfil"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Actualizar Perfil",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"nombre\":\"Barbero Editado\",\"telefono\":\"8888-8888\",\"foto_url\":\"https://picsum.photos/200\"}"
+						},
+						"url": {
+							"raw": "{{base_url}}/usuarios/perfil",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"usuarios",
+								"perfil"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Subir Foto Perfil",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"value": "",
+									"type": "file"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/usuarios/perfil/foto",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"usuarios",
+								"perfil",
+								"foto"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "SERVICIOS",
+			"item": [
+				{
+					"name": "Crear Servicio",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.environment.set('servicio_id', pm.response.json().id)"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"nombre\":\"Corte Fade\",\"descripcion\":\"Moderno\",\"precio\":8000,\"duracion\":45}"
+						},
+						"url": {
+							"raw": "{{base_url}}/servicios",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"servicios"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Obtener Mis Servicios",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/servicios/barbero",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"servicios",
+								"barbero"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Obtener Servicio por ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/servicios/item/{{servicio_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"servicios",
+								"item",
+								"{{servicio_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Actualizar Servicio",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"nombre\":\"Corte Premium\",\"descripcion\":\"Actualizado\",\"precio\":9000,\"duracion\":50}"
+						},
+						"url": {
+							"raw": "{{base_url}}/servicios/{{servicio_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"servicios",
+								"{{servicio_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Subir Imagen Servicio",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"value": "",
+									"type": "file"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/servicios/{{servicio_id}}/upload",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"servicios",
+								"{{servicio_id}}",
+								"upload"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Eliminar Servicio",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/servicios/{{servicio_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"servicios",
+								"{{servicio_id}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "RESERVAS",
+			"item": [
+				{
+					"name": "Crear Reserva (Cliente)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.environment.set('reserva_id', pm.response.json().id)"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"barber_id\":\"{{barber_id}}\",\"servicio_id\":\"{{servicio_id}}\",\"fecha\":\"2025-12-01\",\"hora\":\"10:00\"}"
+						},
+						"url": {
+							"raw": "{{base_url}}/reservas",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"reservas"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Cambiar Estado",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"reserva_id\":\"{{reserva_id}}\",\"estado\":\"aceptada\"}"
+						},
+						"url": {
+							"raw": "{{base_url}}/reservas/estado",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"reservas",
+								"estado"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Obtener Reservas del Barbero",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/reservas/barbero",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"reservas",
+								"barbero"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Obtener Reserva por ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/reservas/{{reserva_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"reservas",
+								"{{reserva_id}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "HORARIOS",
+			"item": [
+				{
+					"name": "Obtener Horarios",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/horarios",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"horarios"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Actualizar Día",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"dia_semana\":\"lunes\",\"trabaja\":true,\"hora_inicio\":\"09:00\",\"hora_fin\":\"17:00\"}"
+						},
+						"url": {
+							"raw": "{{base_url}}/horarios",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"horarios"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Actualizar Semana",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "[{\"dia_semana\":\"lunes\",\"trabaja\":true,\"hora_inicio\":\"09:00\",\"hora_fin\":\"17:00\"}]"
+						},
+						"url": {
+							"raw": "{{base_url}}/horarios/semana",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"horarios",
+								"semana"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "FACTURAS",
+			"item": [
+				{
+					"name": "Generar Factura",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"reserva_id\":\"{{reserva_id}}\"}"
+						},
+						"url": {
+							"raw": "{{base_url}}/facturas",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"facturas"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:3000"
+		},
+		{
+			"key": "token",
+			"value": ""
+		},
+		{
+			"key": "barber_id",
+			"value": ""
+		},
+		{
+			"key": "cliente_id",
+			"value": ""
+		},
+		{
+			"key": "servicio_id",
+			"value": ""
+		},
+		{
+			"key": "reserva_id",
+			"value": ""
+		}
+	]
 }
