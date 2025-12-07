@@ -11,6 +11,8 @@ import horariosRoutes from "./routes/horarios.routes.js";
 import facturasRoutes from "./routes/facturas.routes.js";
 
 import { errorHandler } from "./middlewares/error.js";
+import barberosRoutes from "./routes/barberos.routes.js";
+
 
 const app = express();
 
@@ -29,6 +31,7 @@ app.use("/servicios", serviciosRoutes);
 app.use("/reservas", reservasRoutes);
 app.use("/horarios", horariosRoutes);
 app.use("/facturas", facturasRoutes);
+app.use("/api/barberos", barberosRoutes);
 
 // Manejo de errores
 app.use(errorHandler);
