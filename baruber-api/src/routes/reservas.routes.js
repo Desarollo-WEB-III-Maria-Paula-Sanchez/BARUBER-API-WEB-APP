@@ -1,21 +1,24 @@
 import express from "express";
 import { verificarToken, soloBarbero } from "../middlewares/auth.js";
-
 import { 
   crearReserva, 
   cambiarEstado,
   obtenerReservasCliente,
   obtenerReservasBarbero,
   obtenerReservaPorId,
-  obtenerHorariosDisponibles,  // ← FALTABA ESTA COMA
+  obtenerHorariosDisponibles,
   reagendarReserva
 } from "../controllers/reservas.controller.js";
 
 const router = express.Router();
 
+/* ============================================================
+   RUTAS PARA CLIENTES
+   ============================================================ */
+
 /**
  * Obtener horarios disponibles (cliente)
- * GET /reservas/disponibles?barber_id=xxx&servicio_id=xxx&fecha=2024-12-07
+ * GET /reservas/disponibles?barber_id=xxx&servicio_id=xxx&fecha=2025-12-15
  */
 router.get("/disponibles", verificarToken, obtenerHorariosDisponibles);
 
@@ -24,6 +27,16 @@ router.get("/disponibles", verificarToken, obtenerHorariosDisponibles);
  * POST /reservas/
  */
 router.post("/", verificarToken, crearReserva);
+
+/**
+ * Obtener reservas del cliente autenticado
+ * GET /reservas/cliente
+ */
+router.get("/cliente", verificarToken, obtenerReservasCliente);
+
+/* ============================================================
+   RUTAS PARA BARBEROS
+   ============================================================ */
 
 /**
  * Cambiar estado de reserva (barbero)
@@ -36,12 +49,6 @@ router.put("/estado", verificarToken, soloBarbero, cambiarEstado);
  * PUT /reservas/reagendar
  */
 router.put("/reagendar", verificarToken, soloBarbero, reagendarReserva);
-
-/**
- * Obtener reservas del cliente autenticado
- * GET /reservas/cliente
- */
-router.get("/cliente", verificarToken, obtenerReservasCliente);
 
 /**
  * Obtener reservas del barbero autenticado
