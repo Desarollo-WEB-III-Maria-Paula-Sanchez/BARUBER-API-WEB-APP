@@ -1,196 +1,69 @@
-// ui/reservas/DetalleReservaActivity.kt
-package com.baruber.cliente.ui.reservas
+package com.baruber.cliente.network
 
-import android.app.AlertDialog
-import android.content.Intent
-import android.net.Uri
-import android.os.Bundle
-import android.view.View
-import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
-import androidx.lifecycle.lifecycleScope
-import com.baruber.cliente.R
-import com.baruber.cliente.databinding.ActivityDetalleReservaBinding
-import com.baruber.cliente.models.Reserva
-import com.baruber.cliente.network.ApiClient
-import com.baruber.cliente.utils.Constants
-import com.baruber.cliente.utils.DateTimeUtils
-import com.baruber.cliente.utils.SessionManager
-import com.bumptech.glide.Glide
-import kotlinx.coroutines.launch
-import java.text.NumberFormat
-import java.util.*
+import com.baruber.cliente.models.*
+import okhttp3.MultipartBody
+import retrofit2.Response
+import retrofit2.http.*
 
-class DetalleReservaActivity : AppCompatActivity() {
+interface ApiService {
 
-    private lateinit var binding: ActivityDetalleReservaBinding
-    private lateinit var sessionManager: SessionManager
+    // ===== AUTENTICACIÓN =====
+    @POST("auth/login")
+    suspend fun login(@Body request: LoginRequest): Response<LoginResponse>
 
-    private var reservaId: String = ""
-    private var reserva: Reserva? = null
+    @POST("auth/registro")
+    suspend fun register(@Body request: RegisterRequest): Response<LoginResponse>
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        binding = ActivityDetalleReservaBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+    @GET("auth/me")
+    suspend fun getSession(): Response<SessionResponse>
 
-        sessionManager = SessionManager(this)
+    // ===== USUARIO / PERFIL =====
+    @GET("usuarios/perfil")
+    suspend fun getPerfil(): Response<Usuario>
 
-        reservaId = intent.getStringExtra("reserva_id") ?: ""
+    @PUT("usuarios/perfil")
+    suspend fun updatePerfil(@Body usuario: Usuario): Response<Usuario>
 
-        setupToolbar()
-        loadReserva()
-        setupListeners()
-    }
+    @Multipart
+    @POST("usuarios/perfil/foto")
+    suspend fun uploadFotoPerfil(@Part file: MultipartBody.Part): Response<MessageResponse>
 
-    private fun setupToolbar() {
-        setSupportActionBar(binding.toolbar)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        supportActionBar?.title = "Detalle de Reserva"
+    // ✅ NUEVO: Registrar token de dispositivo
+    @POST("usuarios/device-token")
+    suspend fun registerDeviceToken(@Body request: Map<String, String>): Response<MessageResponse>
 
-        binding.toolbar.setNavigationOnClickListener { finish() }
-    }
+    // ✅ NUEVO: Desactivar token de dispositivo
+    @HTTP(method = "DELETE", path = "usuarios/device-token", hasBody = true)
+    suspend fun unregisterDeviceToken(@Body request: Map<String, String>): Response<MessageResponse>
 
-    private fun loadReserva() {
-        binding.progressBar.visibility = View.VISIBLE
+    // ===== BARBEROS =====
+    @GET("barberos")
+    suspend fun getBarberos(): Response<List<Barbero>>
 
-        lifecycleScope.launch {
-            try {
-                val apiService = ApiClient.create(sessionManager)
-                val response = apiService.getReservasCliente()
+    @GET("barberos/{id}")
+    suspend fun getBarberoById(@Path("id") barberoId: String): Response<Barbero>
 
-                if (response.isSuccessful) {
-                    val reservas = response.body() ?: emptyList()
-                    reserva = reservas.find { it.id == reservaId }
+    // ===== SERVICIOS =====
+    @GET("servicios/barbero/{barber_id}")
+    suspend fun getServiciosBarbero(@Path("barber_id") barberId: String): Response<List<Servicio>>
 
-                    if (reserva != null) {
-                        displayReserva(reserva!!)
-                    } else {
-                        Toast.makeText(this@DetalleReservaActivity, "Reserva no encontrada", Toast.LENGTH_SHORT).show()
-                        finish()
-                    }
-                }
+    // ===== RESERVAS =====
+    @POST("reservas/")
+    suspend fun crearReserva(@Body request: CrearReservaRequest): Response<Reserva>
 
-            } catch (e: Exception) {
-                Toast.makeText(this@DetalleReservaActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
-                finish()
-            } finally {
-                binding.progressBar.visibility = View.GONE
-            }
-        }
-    }
+    @GET("reservas/cliente")
+    suspend fun getReservasCliente(): Response<List<Reserva>>
 
-    private fun displayReserva(reserva: Reserva) {
-        binding.tvBarberoName.text = reserva.usuarios?.nombre ?: "Barbero"
+    @GET("reservas/disponibles")
+    suspend fun getHorariosDisponibles(
+        @Query("barber_id") barberId: String,
+        @Query("servicio_id") servicioId: String,
+        @Query("fecha") fecha: String
+    ): Response<HorariosResponse>
 
-        reserva.usuarios?.fotoUrl?.let { url ->
-            Glide.with(this).load(url).circleCrop().into(binding.ivBarbero)
-        }
+    @PUT("reservas/cancelar")
+    suspend fun cancelarReserva(@Body request: Map<String, String>): Response<MessageResponse>
 
-        binding.tvServicioName.text = reserva.servicios?.nombre ?: "Servicio"
-        binding.tvServicioDescripcion.text = reserva.servicios?.descripcion ?: ""
-        binding.tvDuracion.text = "${reserva.servicios?.duracion} min"
-
-        val formato = NumberFormat.getCurrencyInstance(Locale("es", "CR"))
-        binding.tvPrecio.text = formato.format(reserva.servicios?.precio ?: 0.0)
-
-        binding.tvFecha.text = DateTimeUtils.formatDate(
-            reserva.fecha,
-            Constants.DATE_FORMAT,
-            Constants.DISPLAY_DATE_FORMAT
-        )
-        binding.tvHora.text = DateTimeUtils.formatTime(reserva.hora)
-
-        val (estadoText, colorText, bg) = when (reserva.estado) {
-            Constants.EstadoReserva.PENDIENTE -> Triple("Pendiente", R.color.white, R.drawable.bg_status_pending)
-            Constants.EstadoReserva.ACEPTADA -> Triple("Aceptada", R.color.white, R.drawable.bg_status_accepted)
-            Constants.EstadoReserva.RECHAZADA -> Triple("Rechazada", R.color.white, R.drawable.bg_status_rejected)
-            Constants.EstadoReserva.COMPLETADA -> Triple("Completada", R.color.white, R.drawable.bg_status_completed)
-            else -> Triple(reserva.estado, R.color.text_primary, R.drawable.bg_status_pending)
-        }
-
-        binding.tvEstado.text = estadoText
-        binding.tvEstado.setTextColor(ContextCompat.getColor(this, colorText))
-        binding.tvEstado.setBackgroundResource(bg)
-
-        when (reserva.estado) {
-            Constants.EstadoReserva.PENDIENTE,
-            Constants.EstadoReserva.ACEPTADA -> {
-                binding.btnCancelar.visibility = View.VISIBLE
-                binding.btnDescargarFactura.visibility = View.GONE
-            }
-
-            Constants.EstadoReserva.COMPLETADA -> {
-                binding.btnCancelar.visibility = View.GONE
-                if (!reserva.facturaUrl.isNullOrEmpty()) {
-                    binding.btnDescargarFactura.visibility = View.VISIBLE
-                }
-            }
-
-            else -> {
-                binding.btnCancelar.visibility = View.GONE
-                binding.btnDescargarFactura.visibility = View.GONE
-            }
-        }
-    }
-
-    private fun setupListeners() {
-        binding.btnCancelar.setOnClickListener { showCancelDialog() }
-
-        binding.btnDescargarFactura.setOnClickListener {
-            reserva?.facturaUrl?.let { url ->
-                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-            }
-        }
-    }
-
-    private fun showCancelDialog() {
-        AlertDialog.Builder(this)
-            .setTitle("Cancelar Reserva")
-            .setMessage("¿Estás seguro que deseas cancelar esta reserva?")
-            .setPositiveButton("Sí") { _, _ -> cancelarReserva() }
-            .setNegativeButton("No", null)
-            .show()
-    }
-
-    private fun cancelarReserva() {
-        binding.btnCancelar.isEnabled = false
-
-        lifecycleScope.launch {
-            try {
-                val apiService = ApiClient.create(sessionManager)
-                // ✅ CAMBIO: Solo enviar reserva_id, no estado
-                val request = mapOf("reserva_id" to reservaId)
-
-                // ✅ CAMBIO: Usar endpoint correcto para clientes
-                val response = apiService.cancelarReserva(request)
-
-                if (response.isSuccessful) {
-                    Toast.makeText(
-                        this@DetalleReservaActivity,
-                        "Reserva cancelada exitosamente",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    finish()
-                } else {
-                    val errorBody = response.errorBody()?.string()
-                    Toast.makeText(
-                        this@DetalleReservaActivity,
-                        "Error al cancelar: ${response.code()}",
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
-
-            } catch (e: Exception) {
-                Toast.makeText(
-                    this@DetalleReservaActivity,
-                    "Error: ${e.message}",
-                    Toast.LENGTH_SHORT
-                ).show()
-            } finally {
-                binding.btnCancelar.isEnabled = true
-            }
-        }
-    }
+    @PUT("reservas/estado")
+    suspend fun cambiarEstadoReserva(@Body request: Map<String, String>): Response<Reserva>
 }

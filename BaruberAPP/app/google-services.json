@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "315749173140",
+    "project_id": "cloud-message-7d870",
+    "storage_bucket": "cloud-message-7d870.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:315749173140:android:1ca1e82491cdb3f8efb181",
+        "android_client_info": {
+          "package_name": "com.baruber.cliente"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDni-vM_h2fibXmbIcfcPV7eAjowCf0WGc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

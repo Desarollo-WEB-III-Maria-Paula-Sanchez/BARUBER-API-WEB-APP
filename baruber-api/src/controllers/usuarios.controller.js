@@ -1,3 +1,4 @@
+// controllers/usuarios.controller.js
 import { supabase } from "../config/supabase.js";
 import { supabaseAdmin } from "../utils/supabaseAdmin.js";
 
@@ -7,7 +8,6 @@ import { supabaseAdmin } from "../utils/supabaseAdmin.js";
 export const obtenerPerfil = async (req, res) => {
   const userId = req.user.id;
 
-  // Usar admin para ignorar RLS
   const { data, error } = await supabaseAdmin
     .from("usuarios")
     .select("*")
@@ -26,7 +26,6 @@ export const actualizarPerfil = async (req, res) => {
   const userId = req.user.id;
   const { nombre, telefono, foto_url } = req.body;
 
-  // Usar admin para ignorar RLS
   const { data, error } = await supabaseAdmin
     .from("usuarios")
     .update({ nombre, telefono, foto_url })
@@ -43,7 +42,7 @@ export const actualizarPerfil = async (req, res) => {
 };
 
 /* ============================================================
-   Subir foto de perfil – nuevo
+   Subir foto de perfil
    ============================================================ */
 export const subirFotoPerfil = async (req, res) => {
   const userId = req.user.id;
@@ -53,10 +52,8 @@ export const subirFotoPerfil = async (req, res) => {
     return res.status(400).json({ error: "Archivo requerido" });
   }
 
-  // Nombre único de archivo
   const filename = `${userId}-${Date.now()}.jpg`;
 
-  // Subir a bucket "avatars"
   const { error: uploadError } = await supabaseAdmin.storage
     .from("avatars")
     .upload(filename, file.buffer, {
@@ -69,12 +66,10 @@ export const subirFotoPerfil = async (req, res) => {
     return res.status(400).json(uploadError);
   }
 
-  // Obtener URL pública
   const { data: urlData } = supabaseAdmin.storage
     .from("avatars")
     .getPublicUrl(filename);
 
-  // Guardar en BD usando admin
   const { error: updateError } = await supabaseAdmin
     .from("usuarios")
     .update({ foto_url: urlData.publicUrl })
@@ -89,4 +84,109 @@ export const subirFotoPerfil = async (req, res) => {
     message: "Foto actualizada",
     url: urlData.publicUrl,
   });
+};
+
+/* ============================================================
+   ✅ NUEVO: Registrar token de dispositivo para notificaciones
+   ============================================================ */
+export const registrarDeviceToken = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { token, platform = "android" } = req.body;
+
+    if (!token) {
+      return res.status(400).json({ error: "Token requerido" });
+    }
+
+    console.log(`📱 Registrando token para usuario ${userId}`);
+
+    // Verificar si el token ya existe
+    const { data: existingToken } = await supabaseAdmin
+      .from("device_tokens")
+      .select("*")
+      .eq("token", token)
+      .maybeSingle();
+
+    if (existingToken) {
+      // Actualizar el token existente
+      const { data, error } = await supabaseAdmin
+        .from("device_tokens")
+        .update({
+          user_id: userId,
+          is_active: true,
+          platform,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("token", token)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error actualizando token:", error);
+        return res.status(400).json({ error: error.message });
+      }
+
+      console.log("✅ Token actualizado correctamente");
+      return res.json({
+        message: "Token actualizado",
+        data,
+      });
+    }
+
+    // Insertar nuevo token
+    const { data, error } = await supabaseAdmin
+      .from("device_tokens")
+      .insert({
+        user_id: userId,
+        token,
+        platform,
+        is_active: true,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error insertando token:", error);
+      return res.status(400).json({ error: error.message });
+    }
+
+    console.log("✅ Token registrado correctamente");
+    res.json({
+      message: "Token registrado exitosamente",
+      data,
+    });
+  } catch (err) {
+    console.error("Error en registrarDeviceToken:", err);
+    res.status(500).json({ error: "Error interno del servidor" });
+  }
+};
+
+/* ============================================================
+   ✅ NUEVO: Desactivar token de dispositivo (logout)
+   ============================================================ */
+export const desactivarDeviceToken = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { token } = req.body;
+
+    if (!token) {
+      return res.status(400).json({ error: "Token requerido" });
+    }
+
+    const { error } = await supabaseAdmin
+      .from("device_tokens")
+      .update({ is_active: false })
+      .eq("user_id", userId)
+      .eq("token", token);
+
+    if (error) {
+      console.error("Error desactivando token:", error);
+      return res.status(400).json({ error: error.message });
+    }
+
+    res.json({ message: "Token desactivado correctamente" });
+  } catch (err) {
+    console.error("Error en desactivarDeviceToken:", err);
+    res.status(500).json({ error: "Error interno del servidor" });
+  }
 };

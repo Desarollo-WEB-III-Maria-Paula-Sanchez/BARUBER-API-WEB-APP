@@ -1,4 +1,3 @@
-// ui/auth/LoginActivity.kt
 package com.baruber.cliente.ui.auth
 
 import android.content.Intent
@@ -11,6 +10,7 @@ import com.baruber.cliente.databinding.ActivityLoginBinding
 import com.baruber.cliente.models.LoginRequest
 import com.baruber.cliente.network.ApiClient
 import com.baruber.cliente.ui.main.MainActivity
+import com.baruber.cliente.utils.FCMHelper  // ✅ IMPORTAR
 import com.baruber.cliente.utils.SessionManager
 import kotlinx.coroutines.launch
 
@@ -25,6 +25,9 @@ class LoginActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         sessionManager = SessionManager(this)
+
+        // ✅ SOLICITAR PERMISOS DE NOTIFICACIÓN
+        FCMHelper.requestNotificationPermission(this)
 
         setupListeners()
     }
@@ -83,6 +86,9 @@ class LoginActivity : AppCompatActivity() {
                     sessionManager.saveAuthToken(loginResponse.accessToken)
                     sessionManager.saveRefreshToken(loginResponse.refreshToken)
                     sessionManager.saveUserData(loginResponse.user)
+
+                    // ✅ OBTENER Y ENVIAR TOKEN FCM
+                    FCMHelper.obtenerYEnviarToken(sessionManager)
 
                     Toast.makeText(
                         this@LoginActivity,
