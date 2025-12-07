@@ -56,27 +56,3 @@ export const obtenerBarberoPorId = async (req, res) => {
   }
 };
 
-// routes/barberos.routes.js
-// AGREGAR ESTE NUEVO ARCHIVO A TU API
-
-import express from "express";
-import { obtenerBarberos, obtenerBarberoPorId } from "../controllers/barberos.controller.js";
-
-const router = express.Router();
-
-// Obtener todos los barberos (público para clientes)
-router.get("/", obtenerBarberos);
-
-// Obtener un barbero específico
-router.get("/:id", obtenerBarberoPorId);
-
-export default router;
-
-// server.js o app.js
-// AGREGAR ESTA LÍNEA A TU ARCHIVO PRINCIPAL
-
-import barberosRoutes from "./routes/barberos.routes.js";
-
-// ... otras importaciones ...
-
-app.use("/api/barberos", barberosRoutes);

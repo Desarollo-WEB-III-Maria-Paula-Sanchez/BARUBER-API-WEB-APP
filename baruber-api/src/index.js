@@ -31,7 +31,7 @@ app.use("/servicios", serviciosRoutes);
 app.use("/reservas", reservasRoutes);
 app.use("/horarios", horariosRoutes);
 app.use("/facturas", facturasRoutes);
-app.use("/api/barberos", barberosRoutes);
+app.use("/barberos", barberosRoutes);
 
 // Manejo de errores
 app.use(errorHandler);
