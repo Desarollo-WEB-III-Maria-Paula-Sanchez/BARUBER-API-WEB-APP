@@ -15,6 +15,10 @@ interface ApiService {
     @POST("auth/registro")
     suspend fun register(@Body request: RegisterRequest): Response<LoginResponse>
 
+    // ✅ NUEVO: Login con Google (envía ID Token)
+    @POST("auth/google-token")
+    suspend fun loginWithGoogle(@Body request: Map<String, String>): Response<LoginResponse>
+
     @GET("auth/me")
     suspend fun getSession(): Response<SessionResponse>
 
@@ -29,7 +33,7 @@ interface ApiService {
     @POST("usuarios/perfil/foto")
     suspend fun uploadFotoPerfil(@Part file: MultipartBody.Part): Response<MessageResponse>
 
-    // ===== TOKENS FCM (AÑADIDO) =====
+    // ===== TOKENS FCM =====
     @POST("usuarios/device-token")
     suspend fun registerDeviceToken(@Body request: Map<String, String>): Response<MessageResponse>
 
@@ -61,11 +65,9 @@ interface ApiService {
         @Query("fecha") fecha: String
     ): Response<HorariosResponse>
 
-    // Cliente cancela sus propias reservas
     @PUT("reservas/cancelar")
     suspend fun cancelarReserva(@Body request: Map<String, String>): Response<MessageResponse>
 
-    // Barbero cambia el estado
     @PUT("reservas/estado")
     suspend fun cambiarEstadoReserva(@Body request: Map<String, String>): Response<Reserva>
 }

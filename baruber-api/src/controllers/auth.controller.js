@@ -22,14 +22,20 @@ export const loginEmail = async (req, res) => {
 };
 
 /* ============================================================
-    LOGIN GOOGLE CLIENTE (flujo normal)
+    LOGIN GOOGLE CLIENTE (NUEVO - Implicit Flow)
+    → Similar al barbero pero asigna rol "cliente"
 ============================================================ */
-export const loginGoogle = async (req, res) => {
-  const redirectTo = "http://localhost:5173/login";
+export const loginGoogleCliente = async (req, res) => {
+  // Redirige al frontend (app móvil usará deep link)
+  const FRONTEND_CALLBACK = "http://localhost:5173/login"; // Para web
+  // En producción: "baruber://auth/callback" para app móvil
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
-    options: { redirectTo }
+    options: {
+      redirectTo: FRONTEND_CALLBACK,
+      scopes: "openid email profile",
+    },
   });
 
   if (error) return res.status(400).json(error);
@@ -38,8 +44,167 @@ export const loginGoogle = async (req, res) => {
 };
 
 /* ============================================================
+    CALLBACK GOOGLE CLIENTE (NUEVO)
+    Procesa el código OAuth y asigna rol "cliente"
+============================================================ */
+export const googleCallbackCliente = async (req, res) => {
+  try {
+    const code = req.query.code;
+
+    if (!code) {
+      console.error("❌ No llegó 'code' en el callback");
+      return res.redirect("http://localhost:5173/login?error=no_code");
+    }
+
+    // INTERCAMBIAR CODE POR TOKEN
+    const resp = await fetch(
+      `${process.env.SUPABASE_URL}/auth/v1/token?grant_type=authorization_code`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: process.env.SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({
+          code,
+          redirect_uri: `${process.env.API_URL || "http://localhost:3000"}/auth/google-cliente/callback`,
+        }),
+      }
+    );
+
+    const tokens = await resp.json();
+
+    if (!tokens.access_token) {
+      console.error("❌ No se obtuvo access_token:", tokens);
+      return res.redirect("http://localhost:5173/login?error=invalid_code");
+    }
+
+    const token = tokens.access_token;
+
+    // Obtener datos del usuario
+    const { data, error } = await supabase.auth.getUser(token);
+
+    if (error || !data?.user) {
+      console.error("❌ Error obteniendo usuario:", error);
+      return res.redirect("http://localhost:5173/login?error=user_not_found");
+    }
+
+    const user = data.user;
+
+    // Buscar perfil en BD
+    const { data: perfil } = await supabase
+      .from("usuarios")
+      .select("*")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    // ✅ Si no existe, crear con ROL "CLIENTE"
+    if (!perfil) {
+      await supabaseAdmin.from("usuarios").insert({
+        id: user.id,
+        email: user.email,
+        nombre: user.user_metadata.full_name || user.email.split('@')[0],
+        rol: "cliente", // ← ROL CLIENTE
+        foto_url: user.user_metadata.avatar_url || null,
+      });
+    }
+
+    // Retornar tokens al frontend
+    return res.redirect(`http://localhost:5173/login?access_token=${token}&refresh_token=${tokens.refresh_token}`);
+  } catch (err) {
+    console.error("❌ Error en callback Google Cliente:", err);
+    return res.redirect("http://localhost:5173/login?error=callback_crash");
+  }
+};
+
+/* ============================================================
+    LOGIN GOOGLE BARBERO (ya existente)
+============================================================ */
+export const loginGoogleBarbero = async (req, res) => {
+  const FRONTEND_CALLBACK = "http://localhost:5173/dashboard";
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: FRONTEND_CALLBACK,
+      scopes: "openid email profile",
+    },
+  });
+
+  if (error) return res.status(400).json(error);
+
+  return res.json({ url: data.url });
+};
+
+/* ============================================================
+    CALLBACK GOOGLE BARBERO (ya existente)
+============================================================ */
+export const googleCallbackBarbero = async (req, res) => {
+  try {
+    const code = req.query.code;
+
+    if (!code) {
+      console.error("❌ No llegó 'code' en el callback");
+      return res.redirect("http://localhost:5173/login?error=no_code");
+    }
+
+    const resp = await fetch(
+      `${process.env.SUPABASE_URL}/auth/v1/token?grant_type=authorization_code`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: process.env.SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({
+          code,
+          redirect_uri: "http://localhost:3000/auth/google-barbero/callback",
+        }),
+      }
+    );
+
+    const tokens = await resp.json();
+
+    if (!tokens.access_token) {
+      console.error("❌ No se obtuvo access_token:", tokens);
+      return res.redirect("http://localhost:5173/login?error=invalid_code");
+    }
+
+    const token = tokens.access_token;
+
+    const { data, error } = await supabase.auth.getUser(token);
+
+    if (error || !data?.user) {
+      console.error("❌ Error obteniendo usuario:", error);
+      return res.redirect("http://localhost:5173/login?error=user_not_found");
+    }
+
+    const user = data.user;
+
+    const { data: perfil } = await supabase
+      .from("usuarios")
+      .select("*")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (!perfil) {
+      await supabaseAdmin.from("usuarios").insert({
+        id: user.id,
+        email: user.email,
+        nombre: user.user_metadata.full_name,
+        rol: "barbero",
+      });
+    }
+
+    return res.redirect(`http://localhost:5173/dashboard?access_token=${token}`);
+  } catch (err) {
+    console.error("❌ Error en callback Google:", err);
+    return res.redirect("http://localhost:5173/login?error=callback_crash");
+  }
+};
+
+/* ============================================================
     REGISTRO CLIENTE
-    ✅ MODIFICADO: Ahora retorna tokens como el login
 ============================================================ */
 export const registrar = async (req, res) => {
   const { email, password, nombre } = req.body;
@@ -63,7 +228,6 @@ export const registrar = async (req, res) => {
   if (insertError)
     return res.status(400).json({ message: "Error insertando perfil", insertError });
 
-  // ✅ CAMBIO: Retornar tokens igual que en loginEmail
   return res.json({
     access_token: data.session.access_token,
     refresh_token: data.session.refresh_token,
@@ -102,103 +266,6 @@ export const registrarBarbero = async (req, res) => {
 };
 
 /* ============================================================
-    LOGIN GOOGLE BARBERO (INICIA OAUTH)
-    IMPORTANTE: flowType: "pkce" → evita #access_token
-============================================================ */
-export const loginGoogleBarbero = async (req, res) => {
-  // Redirige directamente al frontend, no al backend
-  const FRONTEND_CALLBACK = "http://localhost:5173/dashboard";
-
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: "google",
-    options: {
-      redirectTo: FRONTEND_CALLBACK,
-      // NO uses flowType: "pkce" aquí
-      scopes: "openid email profile",
-    },
-  });
-
-  if (error) return res.status(400).json(error);
-
-  return res.json({ url: data.url });
-};
-
-
-/* ============================================================
-    CALLBACK GOOGLE BARBERO
-    Aquí llega Google → Supabase transforma CODE → token
-    Luego insertamos usuario si es nuevo
-============================================================ */
-export const googleCallbackBarbero = async (req, res) => {
-  try {
-    const code = req.query.code;
-
-    if (!code) {
-      console.error("❌ No llegó 'code' en el callback");
-      return res.redirect("http://localhost:5173/login?error=no_code");
-    }
-
-    // INTERCAMBIAR CODE POR TOKEN MEDIANTE OAUTH BACKEND
-    const resp = await fetch(
-      "https://xuogfwkdkwycumlscyna.supabase.co/auth/v1/token?grant_type=authorization_code",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: process.env.SUPABASE_ANON_KEY,
-        },
-        body: JSON.stringify({
-          code,
-          redirect_uri: "http://localhost:3000/auth/google-barbero/callback",
-        }),
-      }
-    );
-
-    const tokens = await resp.json();
-
-    if (!tokens.access_token) {
-      console.error("❌ No se obtuvo access_token:", tokens);
-      return res.redirect("http://localhost:5173/login?error=invalid_code");
-    }
-
-    const token = tokens.access_token;
-
-    // Obtener datos del usuario con ese token
-    const { data, error } = await supabase.auth.getUser(token);
-
-    if (error || !data?.user) {
-      console.error("❌ Error obteniendo usuario:", error);
-      return res.redirect("http://localhost:5173/login?error=user_not_found");
-    }
-
-    const user = data.user;
-
-    // Buscar perfil en BD
-    const { data: perfil } = await supabase
-      .from("usuarios")
-      .select("*")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    if (!perfil) {
-      await supabaseAdmin.from("usuarios").insert({
-        id: user.id,
-        email: user.email,
-        nombre: user.user_metadata.full_name,
-        rol: "barbero",
-      });
-    }
-
-    return res.redirect(`http://localhost:5173/dashboard?access_token=${token}`);
-  } catch (err) {
-    console.error("❌ Error en callback Google:", err);
-    return res.redirect("http://localhost:5173/login?error=callback_crash");
-  }
-};
-
-
-
-/* ============================================================
     OBTENER SESIÓN
 ============================================================ */
 export const obtenerSesion = async (req, res) => {
@@ -233,3 +300,82 @@ export const refrescarToken = async (req, res) => {
 
   return res.json(data);
 };
+
+export const loginConGoogleToken = async (req, res) => {
+  try {
+    const { idToken } = req.body;
+
+    if (!idToken) {
+      return res.status(400).json({ error: "ID Token requerido" });
+    }
+
+    console.log("🔐 Validando ID Token de Google...");
+
+    // ✅ Validar token con Supabase (método oficial)
+    const { data, error } = await supabase.auth.signInWithIdToken({
+      provider: "google",
+      token: idToken,
+    });
+
+    if (error) {
+      console.error("❌ Error validando token:", error);
+      return res.status(400).json({ error: error.message });
+    }
+
+    const user = data.user;
+    const session = data.session;
+
+    if (!user || !session) {
+      return res.status(400).json({ error: "No se pudo autenticar con Google" });
+    }
+
+    // ✅ Verificar si existe el perfil en la tabla usuarios
+    const { data: perfil } = await supabaseAdmin
+      .from("usuarios")
+      .select("*")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    // ✅ Si no existe, crear perfil automáticamente con ROL "CLIENTE"
+    if (!perfil) {
+      console.log("📝 Creando perfil de cliente para:", user.email);
+      
+      const { error: insertError } = await supabaseAdmin
+        .from("usuarios")
+        .insert({
+          id: user.id,
+          email: user.email,
+          nombre: user.user_metadata?.full_name || user.email.split('@')[0],
+          rol: "cliente", // ✅ IMPORTANTE: Asignar rol cliente
+          foto_url: user.user_metadata?.avatar_url || null,
+          telefono: null,
+        });
+
+      if (insertError) {
+        console.error("❌ Error creando perfil:", insertError);
+        return res.status(500).json({ error: "Error creando perfil de usuario" });
+      }
+    }
+
+    console.log("✅ Login con Google exitoso");
+
+    // ✅ Retornar respuesta igual que loginEmail y registrar
+    return res.json({
+      access_token: session.access_token,
+      refresh_token: session.refresh_token,
+      user: {
+        id: user.id,
+        email: user.email,
+        nombre: perfil?.nombre || user.user_metadata?.full_name || user.email.split('@')[0],
+        rol: perfil?.rol || "cliente",
+        telefono: perfil?.telefono || null,
+        fotoUrl: perfil?.foto_url || user.user_metadata?.avatar_url || null,
+      },
+    });
+
+  } catch (err) {
+    console.error("❌ Error en loginConGoogleToken:", err);
+    return res.status(500).json({ error: "Error interno del servidor" });
+  }
+};
+  

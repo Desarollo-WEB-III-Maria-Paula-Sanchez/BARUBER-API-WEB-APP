@@ -10,6 +10,7 @@
     <string name="name">Nombre completo</string>
     <string name="login_button">Iniciar Sesión</string>
     <string name="register_button">Registrarse</string>
+    <string name="continue_with_google">Continuar con Google</string> <!-- ✅ NUEVO -->
     <string name="no_account">¿No tienes cuenta?</string>
     <string name="already_have_account">¿Ya tienes cuenta?</string>
     <string name="create_account">Crear cuenta</string>
@@ -74,7 +75,7 @@
     <string name="success_cancel">Reserva cancelada</string>
     <string name="success_profile_updated">Perfil actualizado</string>
     <string name="cancel_reservation_confirm">¿Estás seguro que deseas cancelar esta reserva?</string>
-    <string name="title_activity_register">RegisterActivity</string>
+
     <!-- Botones -->
     <string name="button_yes">Sí</string>
     <string name="button_no">No</string>
@@ -90,6 +91,9 @@
     <string name="friday">Viernes</string>
     <string name="saturday">Sábado</string>
     <string name="sunday">Domingo</string>
+
+    <!-- Títulos de Activities -->
+    <string name="title_activity_register">RegisterActivity</string>
     <string name="title_activity_main">MainActivity</string>
     <string name="title_activity_splash">SplashActivity</string>
     <string name="title_activity_login">LoginActivity</string>
