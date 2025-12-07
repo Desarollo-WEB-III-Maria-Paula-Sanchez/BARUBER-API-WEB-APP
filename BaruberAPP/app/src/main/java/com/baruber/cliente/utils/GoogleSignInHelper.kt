@@ -2,13 +2,12 @@ package com.baruber.cliente.utils
 
 import android.content.Context
 import android.util.Log
-import com.baruber.cliente.models.LoginResponse
-import com.baruber.cliente.network.ApiClient
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
+import com.google.android.gms.common.api.CommonStatusCodes
 import com.google.android.gms.tasks.Task
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
@@ -17,16 +16,22 @@ import kotlin.coroutines.resumeWithException
 object GoogleSignInHelper {
     private const val TAG = "GoogleSignInHelper"
 
-    // ✅ REEMPLAZA CON TU WEB CLIENT ID de Google Cloud Console
-    // Lo obtienes en: https://console.cloud.google.com/apis/credentials
-    private const val WEB_CLIENT_ID = "925501836568-lvp02lsm81quhdrstvnoni4a6lo1mmp2.apps.googleusercontent.co"
+    private const val WEB_CLIENT_ID = "925501836568-lvp02lsm81quhdrstvnoni4a6lo1mmp2.apps.googleusercontent.com"
+
+    /**
+     * Verifica si hay una cuenta de Google ya guardada
+     * @return La última cuenta usada o null si no hay ninguna
+     */
+    fun getLastSignedInAccount(context: Context): GoogleSignInAccount? {
+        return GoogleSignIn.getLastSignedInAccount(context)
+    }
 
     /**
      * Crea el cliente de Google Sign-In
      */
     fun getGoogleSignInClient(context: Context): GoogleSignInClient {
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestIdToken(WEB_CLIENT_ID) // ✅ IMPORTANTE: Necesitamos el ID Token
+            .requestIdToken(WEB_CLIENT_ID)
             .requestEmail()
             .requestProfile()
             .build()
@@ -35,43 +40,76 @@ object GoogleSignInHelper {
     }
 
     /**
-     * Inicia el flujo de Google Sign-In
-     * @return Intent para startActivityForResult
+     * Obtiene el Intent para iniciar Google Sign-In
+     * @param forceAccountPicker Si es true, fuerza mostrar el selector de cuentas
      */
-    fun getSignInIntent(context: Context) = getGoogleSignInClient(context).signInIntent
+    fun getSignInIntent(context: Context, forceAccountPicker: Boolean = false): android.content.Intent {
+        val client = getGoogleSignInClient(context)
 
-    /**
-     * Procesa el resultado del Intent de Google Sign-In
-     * @param data Intent recibido en onActivityResult
-     * @return GoogleSignInAccount con los datos del usuario
-     */
+        if (forceAccountPicker) {
+            // ✅ Forzar selector: primero cierra sesión silenciosamente
+            client.signOut().addOnCompleteListener {
+                Log.d(TAG, "🔄 Sesión cerrada para mostrar selector de cuentas")
+            }
+        }
+
+        return client.signInIntent
+    }
+
     suspend fun handleSignInResult(data: android.content.Intent?): GoogleSignInAccount {
         return suspendCancellableCoroutine { continuation ->
             try {
                 val task: Task<GoogleSignInAccount> = GoogleSignIn.getSignedInAccountFromIntent(data)
                 val account = task.getResult(ApiException::class.java)
 
-                if (account != null) {
-                    Log.d(TAG, "✅ Google Sign-In exitoso: ${account.email}")
+                if (account?.idToken != null) {
+                    Log.d(TAG, "✅ Google Sign-In exitoso")
+                    Log.d(TAG, "   Email: ${account.email}")
+                    Log.d(TAG, "   Nombre: ${account.displayName}")
+                    Log.d(TAG, "   ID Token: ${account.idToken?.take(30)}...")
                     continuation.resume(account)
                 } else {
-                    Log.e(TAG, "❌ Cuenta de Google es null")
-                    continuation.resumeWithException(Exception("Cuenta de Google es null"))
+                    val error = "No se obtuvo ID Token de Google"
+                    Log.e(TAG, "❌ $error")
+                    continuation.resumeWithException(Exception(error))
                 }
             } catch (e: ApiException) {
-                Log.e(TAG, "❌ Error en Google Sign-In: ${e.statusCode}", e)
-                continuation.resumeWithException(e)
+                val errorMessage = when (e.statusCode) {
+                    CommonStatusCodes.SIGN_IN_REQUIRED -> "Se requiere iniciar sesión"
+                    CommonStatusCodes.INVALID_ACCOUNT -> "Cuenta de Google inválida"
+                    CommonStatusCodes.NETWORK_ERROR -> "Error de red. Verifica tu conexión"
+                    CommonStatusCodes.DEVELOPER_ERROR ->
+                        "Error de configuración del desarrollador"
+                    10 -> "Error de configuración (código 10)"
+                    12501 -> "Inicio de sesión cancelado por el usuario"
+                    else -> "Error desconocido (código: ${e.statusCode})"
+                }
+
+                Log.e(TAG, "❌ Error en Google Sign-In (${e.statusCode}): $errorMessage")
+                continuation.resumeWithException(Exception(errorMessage, e))
             }
         }
     }
 
     /**
      * Cierra sesión de Google
+     * @param revokeAccess Si es true, también revoca el acceso (desvincula completamente)
      */
-    fun signOut(context: Context, onComplete: () -> Unit) {
-        getGoogleSignInClient(context).signOut().addOnCompleteListener {
-            Log.d(TAG, "✅ Google Sign-Out completado")
-            onComplete()
+    fun signOut(context: Context, revokeAccess: Boolean = false, onComplete: () -> Unit) {
+        val client = getGoogleSignInClient(context)
+
+        if (revokeAccess) {
+            // Revoca acceso completamente (borra todo)
+            client.revokeAccess().addOnCompleteListener {
+                Log.d(TAG, "✅ Google acceso revocado")
+                onComplete()
+            }
+        } else {
+            // Solo cierra sesión (mantiene cuenta guardada)
+            client.signOut().addOnCompleteListener {
+                Log.d(TAG, "✅ Google Sign-Out completado")
+                onComplete()
+            }
         }
     }
 
