@@ -540,3 +540,52 @@ export const reagendarReserva = async (req, res) => {
     return res.status(500).json({ error: "Error interno al reagendar reserva" });
   }
 };
+
+/* ============================================================
+   Cancelar reserva — Cliente
+   ============================================================ */
+export const cancelarReservaCliente = async (req, res) => {
+  const cliente_id = req.user.id;
+  const { reserva_id } = req.body;
+
+  try {
+    // Verificar que la reserva pertenece al cliente
+    const { data: reserva, error: reservaError } = await supabaseAdmin
+      .from("reservas")
+      .select("*")
+      .eq("id", reserva_id)
+      .eq("cliente_id", cliente_id)
+      .single();
+
+    if (reservaError || !reserva) {
+      return res.status(404).json({ error: "Reserva no encontrada" });
+    }
+
+    // Solo se pueden cancelar reservas pendientes o aceptadas
+    if (reserva.estado === "completada" || reserva.estado === "rechazada") {
+      return res.status(400).json({ 
+        error: "No se puede cancelar una reserva completada o rechazada" 
+      });
+    }
+
+    // Cancelar la reserva (cambiar estado a rechazada)
+    const { data, error } = await supabaseAdmin
+      .from("reservas")
+      .update({ estado: "rechazada" })
+      .eq("id", reserva_id)
+      .eq("cliente_id", cliente_id)
+      .select()
+      .single();
+
+    if (error) return res.status(400).json(error);
+
+    return res.json({
+      message: "Reserva cancelada exitosamente",
+      data
+    });
+
+  } catch (err) {
+    console.error("Error cancelando reserva:", err);
+    return res.status(500).json({ error: "Error interno al cancelar reserva" });
+  }
+};

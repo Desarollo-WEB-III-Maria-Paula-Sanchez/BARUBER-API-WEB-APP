@@ -7,7 +7,8 @@ import {
   obtenerReservasBarbero,
   obtenerReservaPorId,
   obtenerHorariosDisponibles,
-  reagendarReserva
+  reagendarReserva,
+  cancelarReservaCliente
 } from "../controllers/reservas.controller.js";
 
 const router = express.Router();
@@ -33,6 +34,7 @@ router.post("/", verificarToken, crearReserva);
  * GET /reservas/cliente
  */
 router.get("/cliente", verificarToken, obtenerReservasCliente);
+router.put("/cancelar", authMiddleware, cancelarReservaCliente);
 
 /* ============================================================
    RUTAS PARA BARBEROS
