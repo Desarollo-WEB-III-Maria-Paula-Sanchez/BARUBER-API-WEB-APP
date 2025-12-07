@@ -39,6 +39,7 @@ export const loginGoogle = async (req, res) => {
 
 /* ============================================================
     REGISTRO CLIENTE
+    ✅ MODIFICADO: Ahora retorna tokens como el login
 ============================================================ */
 export const registrar = async (req, res) => {
   const { email, password, nombre } = req.body;
@@ -62,8 +63,10 @@ export const registrar = async (req, res) => {
   if (insertError)
     return res.status(400).json({ message: "Error insertando perfil", insertError });
 
+  // ✅ CAMBIO: Retornar tokens igual que en loginEmail
   return res.json({
-    message: "Cliente registrado",
+    access_token: data.session.access_token,
+    refresh_token: data.session.refresh_token,
     user: data.user,
   });
 };
