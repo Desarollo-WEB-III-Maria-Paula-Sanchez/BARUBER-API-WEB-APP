@@ -19,7 +19,7 @@ object GoogleSignInHelper {
 
     // ✅ REEMPLAZA CON TU WEB CLIENT ID de Google Cloud Console
     // Lo obtienes en: https://console.cloud.google.com/apis/credentials
-    private const val WEB_CLIENT_ID = "TU_WEB_CLIENT_ID.apps.googleusercontent.com"
+    private const val WEB_CLIENT_ID = "925501836568-lvp02lsm81quhdrstvnoni4a6lo1mmp2.apps.googleusercontent.co"
 
     /**
      * Crea el cliente de Google Sign-In
