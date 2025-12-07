@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit
 
 object ApiClient {
 
-    private const val BASE_URL = "https://baruber-api-web-app-1.onrender.com" // CAMBIAR POR TU URL
+    private const val BASE_URL = "https://baruber-api-web-app-1.onrender.com/" // CAMBIAR POR TU URL
 
     fun create(sessionManager: SessionManager): ApiService {
         val loggingInterceptor = HttpLoggingInterceptor().apply {
