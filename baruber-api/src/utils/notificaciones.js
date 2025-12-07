@@ -16,9 +16,25 @@ export const enviarNotificacion = async (userId, titulo, mensaje, data = {}) => 
     // 1. Obtener tokens del usuario
     const { data: tokens, error } = await supabaseAdmin
       .from("device_tokens")
-      .select("token")
+      .select("*") // ⭐ Cambiado de "token" a "*" para ver todos los campos
       .eq("user_id", userId)
       .eq("is_active", true);
+
+    // ⭐ LOGS DE DIAGNÓSTICO
+    console.log(`🔍 Buscando tokens para user_id: ${userId}`);
+    console.log(`📊 Resultado de la query:`, JSON.stringify(tokens, null, 2));
+    console.log(`❓ ¿Hubo error en la query?:`, error);
+    
+    if (tokens && tokens.length > 0) {
+      console.log(`✅ Tokens encontrados:`, tokens.map(t => ({
+        id: t.id,
+        user_id: t.user_id,
+        platform: t.platform,
+        token_preview: t.token?.substring(0, 20) + '...',
+        is_active: t.is_active
+      })));
+    }
+    // ⭐ FIN LOGS DE DIAGNÓSTICO
 
     if (error) {
       console.error("❌ Error obteniendo tokens:", error);
@@ -27,6 +43,16 @@ export const enviarNotificacion = async (userId, titulo, mensaje, data = {}) => 
 
     if (!tokens || tokens.length === 0) {
       console.log("⚠️ No se encontraron tokens activos para el usuario");
+      
+      // ⭐ QUERY ADICIONAL: Buscar TODOS los tokens (incluso inactivos)
+      const { data: allTokens } = await supabaseAdmin
+        .from("device_tokens")
+        .select("user_id, is_active, platform")
+        .eq("user_id", userId);
+      
+      console.log(`🔍 Tokens totales para este usuario (activos e inactivos):`, allTokens);
+      // ⭐ FIN QUERY ADICIONAL
+      
       return { success: false, error: "No tokens found" };
     }
 
@@ -68,6 +94,7 @@ export const enviarNotificacion = async (userId, titulo, mensaje, data = {}) => 
       response.responses.forEach((resp, idx) => {
         if (!resp.success) {
           const errorCode = resp.error?.code;
+          console.log(`❌ Error en token ${idx}:`, errorCode, resp.error?.message);
           
           // Eliminar tokens inválidos o no registrados
           if (
