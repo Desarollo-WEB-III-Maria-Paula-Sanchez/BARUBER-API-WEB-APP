@@ -1,6 +1,4 @@
-// utils/firebase.js
 import admin from "firebase-admin";
-import { readFileSync } from "fs";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -8,7 +6,7 @@ dotenv.config();
 let firebaseApp = null;
 
 /**
- * Inicializa Firebase Admin SDK
+ * Inicializa Firebase Admin SDK usando variable de entorno
  */
 export const initializeFirebase = () => {
   try {
@@ -17,28 +15,29 @@ export const initializeFirebase = () => {
       return firebaseApp;
     }
 
-    const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
+    const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT;
 
-    if (!serviceAccountPath) {
-      throw new Error("❌ FIREBASE_SERVICE_ACCOUNT_PATH no está definido en .env");
+    if (!serviceAccountJson) {
+      throw new Error("❌ La variable FIREBASE_SERVICE_ACCOUNT no está configurada");
     }
 
-    const serviceAccount = JSON.parse(readFileSync(serviceAccountPath, "utf8"));
+    const serviceAccount = JSON.parse(serviceAccountJson);
 
     firebaseApp = admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
+      credential: admin.credential.cert(serviceAccount)
     });
 
-    console.log("✅ Firebase Admin SDK inicializado correctamente");
+    console.log("🔥 Firebase Admin SDK inicializado correctamente desde env");
     return firebaseApp;
+
   } catch (error) {
     console.error("❌ Error inicializando Firebase:", error.message);
-    throw error;
+    console.error("⚠️ Las notificaciones push NO funcionarán");
   }
 };
 
 /**
- * Obtiene la instancia de Firebase Messaging
+ * Retorna instancia de Firebase Messaging
  */
 export const getMessaging = () => {
   if (!firebaseApp) {
