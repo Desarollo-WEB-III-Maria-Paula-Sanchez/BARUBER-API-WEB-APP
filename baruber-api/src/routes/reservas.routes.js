@@ -9,7 +9,7 @@ import {
   reagendarReserva,
   cancelarReservaCliente  //
 } from "../controllers/reservas.controller.js";
-import { authMiddleware } from "../middleware/auth.js"; //
+import { verificarToken, soloBarbero } from "../middlewares/auth.js";
 
 const router = express.Router();
 
