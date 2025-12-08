@@ -463,8 +463,8 @@ export const obtenerHorariosDisponibles = async (req, res) => {
       }
 
       // ⭐ CORREGIDO: Si es hoy, no mostrar horas que ya pasaron (con timezone Costa Rica)
-      const hoyStr = new Date().toISOString().split('T')[0];
-      if (fecha === hoyStr) {
+      const hoyCR = costaRicaTime.toISOString().split("T")[0];
+      if (fecha === hoyCR) {
         // Obtener hora actual en Costa Rica (UTC-6)
         const ahora = new Date();
         const costaRicaTime = new Date(ahora.toLocaleString('en-US', { timeZone: 'America/Costa_Rica' }));
