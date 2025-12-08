@@ -6,12 +6,20 @@ import { enviarNotificacion } from "../utils/notificaciones.js";
   FUNCIONES AUXILIARES DE VALIDACIÓN
   ============================================================ */
 
-// Validar que la fecha/hora no sea en el pasado
+// Validar que la fecha/hora no sea en el pasado (usando hora real de Costa Rica)
 const validarFechaFutura = (fecha, hora) => {
+  // Obtener fecha/hora actual en Costa Rica
   const ahora = new Date();
+  const costaRicaTime = new Date(
+    ahora.toLocaleString('en-US', { timeZone: 'America/Costa_Rica' })
+  );
+
+  // Fecha/hora de la reserva en hora local del servidor (pero compararemos contra CR)
   const fechaReserva = new Date(`${fecha}T${hora}`);
-  return fechaReserva > ahora;
+
+  return fechaReserva > costaRicaTime;
 };
+
 
 // Validar que el horario esté dentro del horario laboral del barbero
 const validarHorarioLaboral = async (barber_id, fecha, hora, duracion) => {
