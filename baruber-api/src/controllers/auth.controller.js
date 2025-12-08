@@ -121,7 +121,7 @@ export const googleCallbackCliente = async (req, res) => {
     LOGIN GOOGLE BARBERO - ✅ FIX APLICADO
 ============================================================ */
 export const loginGoogleBarbero = async (req, res) => {
-  const FRONTEND_CALLBACK = "https://baruber-api-web-app-2.onrender.com/dashboard";
+  const FRONTEND_CALLBACK = "http://localhost:5173/dashboard";
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
