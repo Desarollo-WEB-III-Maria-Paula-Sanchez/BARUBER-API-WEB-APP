@@ -378,12 +378,16 @@ export const obtenerHorariosDisponibles = async (req, res) => {
   const { barber_id, servicio_id, fecha } = req.query;
 
   try {
-    // 1. Validar que la fecha no sea en el pasado
-    const fechaObj = new Date(fecha + 'T00:00:00');
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
+    // 1. Validar que la fecha no sea en el pasado (usando timezone Costa Rica)
+      const fechaObj = new Date(fecha + 'T00:00:00');
 
-    if (fechaObj < hoy) {
+// Obtener fecha actual en Costa Rica
+    const ahora = new Date();
+    const costaRicaTime = new Date(ahora.toLocaleString('en-US', { timeZone: 'America/Costa_Rica' }));
+    const hoyCostaRica = new Date(costaRicaTime);
+    hoyCostaRica.setHours(0, 0, 0, 0);
+
+    if (fechaObj < hoyCostaRica) {
       return res.status(400).json({ error: "No se puede consultar fechas pasadas" });
     }
 
