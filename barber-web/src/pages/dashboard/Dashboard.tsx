@@ -63,7 +63,17 @@ export default function Dashboard() {
   // ==============================
   // MÉTRICAS
   // ==============================
-  const hoy = new Date().toISOString().split("T")[0];
+  const hoy = new Intl.DateTimeFormat("es-CR", {
+    timeZone: "America/Costa_Rica",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  })
+  .format(new Date())
+  .split("/")
+  .reverse()
+  .join("-");
+
 
   const reservasHoy = reservas.filter((r) => r.fecha === hoy);
   const pendientesHoy = reservasHoy.filter((r) => r.estado === "pendiente");

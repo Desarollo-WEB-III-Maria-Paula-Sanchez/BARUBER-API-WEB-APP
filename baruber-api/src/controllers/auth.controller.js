@@ -118,7 +118,7 @@ export const googleCallbackCliente = async (req, res) => {
 };
 
 /* ============================================================
-    LOGIN GOOGLE BARBERO (ya existente)
+    LOGIN GOOGLE BARBERO - ✅ FIX APLICADO
 ============================================================ */
 export const loginGoogleBarbero = async (req, res) => {
   const FRONTEND_CALLBACK = "http://localhost:5173/dashboard";
@@ -126,7 +126,7 @@ export const loginGoogleBarbero = async (req, res) => {
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: FRONTEND_CALLBACK,
+      redirectTo: FRONTEND_CALLBACK, 
       scopes: "openid email profile",
     },
   });
@@ -136,8 +136,9 @@ export const loginGoogleBarbero = async (req, res) => {
   return res.json({ url: data.url });
 };
 
+
 /* ============================================================
-    CALLBACK GOOGLE BARBERO (ya existente)
+    CALLBACK GOOGLE BARBERO - ✅ FIX APLICADO
 ============================================================ */
 export const googleCallbackBarbero = async (req, res) => {
   try {
@@ -171,6 +172,7 @@ export const googleCallbackBarbero = async (req, res) => {
     }
 
     const token = tokens.access_token;
+    const refreshToken = tokens.refresh_token; // ✅ FIX: Capturar refresh_token
 
     const { data, error } = await supabase.auth.getUser(token);
 
@@ -191,12 +193,16 @@ export const googleCallbackBarbero = async (req, res) => {
       await supabaseAdmin.from("usuarios").insert({
         id: user.id,
         email: user.email,
-        nombre: user.user_metadata.full_name,
+        nombre: user.user_metadata.full_name || user.email.split('@')[0],
         rol: "barbero",
+        foto_url: user.user_metadata.avatar_url || null,
       });
     }
 
-    return res.redirect(`http://localhost:5173/dashboard?access_token=${token}`);
+    // ✅ FIX: Incluir refresh_token en la redirección
+    return res.redirect(
+      `http://localhost:5173/dashboard?access_token=${token}&refresh_token=${refreshToken}`
+    );
   } catch (err) {
     console.error("❌ Error en callback Google:", err);
     return res.redirect("http://localhost:5173/login?error=callback_crash");
@@ -277,7 +283,7 @@ export const obtenerSesion = async (req, res) => {
         nombre: req.user.perfil.nombre,
         rol: req.user.perfil.rol,
         telefono: req.user.perfil.telefono,
-        foto: req.user.perfil.foto,
+        foto: req.user.perfil.foto_url,
       },
     });
   } catch (err) {
@@ -301,6 +307,9 @@ export const refrescarToken = async (req, res) => {
   return res.json(data);
 };
 
+/* ============================================================
+    LOGIN CON GOOGLE TOKEN (Para app móvil)
+============================================================ */
 export const loginConGoogleToken = async (req, res) => {
   try {
     const { idToken } = req.body;
@@ -378,4 +387,3 @@ export const loginConGoogleToken = async (req, res) => {
     return res.status(500).json({ error: "Error interno del servidor" });
   }
 };
-  
