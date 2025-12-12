@@ -5,13 +5,14 @@
     <!-- NECESARIO PARA RETROFIT / OKHTTP -->
     <uses-permission android:name="android.permission.INTERNET" />
 
-    <!-- ✅ PERMISOS PARA LEER IMÁGENES -->
-    <!-- Para Android 12 y anteriores (API 32 y menores) -->
+    <!-- Permisos para acceder a imágenes -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
 
-    <!-- Para Android 13+ (API 33+) -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+
+    <!-- ✅ Permiso de notificaciones Android 13+ -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:allowBackup="true"
@@ -27,7 +28,7 @@
         <activity
             android:name=".ui.auth.SplashActivity"
             android:exported="true"
-            android:label="@string/title_activity_splash"
+            android:label="@string/app_name"
             android:theme="@style/Theme.Baruber">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -83,6 +84,25 @@
             android:exported="false"
             android:label="@string/title_activity_detalle_reserva"
             android:theme="@style/Theme.Baruber" />
+
+        <!-- ✅ SERVICIO FCM (obligatorio para recibir notificaciones) -->
+        <service
+            android:name=".services.MyFirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+        <!-- ✅ Metadata para el icono de notificaciones -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_notification" />
+
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/primary" />
+
     </application>
 
 </manifest>

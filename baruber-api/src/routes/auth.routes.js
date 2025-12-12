@@ -1,12 +1,15 @@
 import express from "express";
 import {
   loginEmail,
-  loginGoogle,
+  loginGoogleCliente,        // ✅ Para web
+  googleCallbackCliente,     // ✅ Callback web
   registrar,
   refrescarToken,
   obtenerSesion,
   registrarBarbero,
   loginGoogleBarbero,
+  googleCallbackBarbero,
+  loginConGoogleToken,       // ✅ Para app móvil Android
 } from "../controllers/auth.controller.js";
 
 import { verificarToken } from "../middlewares/auth.js";
@@ -21,16 +24,22 @@ router.post("/registro", registrar);
 router.post("/registro-barbero", registrarBarbero);
 
 /* ============================================================
-    LOGIN GOOGLE CLIENTE
+    LOGIN GOOGLE CLIENTE (Web)
 ============================================================ */
-router.get("/google", loginGoogle);
+router.get("/google-cliente", loginGoogleCliente);
+router.get("/google-cliente/callback", googleCallbackCliente);
 
 /* ============================================================
-    LOGIN GOOGLE BARBERO (IMPLICIT FLOW)
-    → redirige a Google
-    → Google vuelve al frontend con #access_token=...
+    ✅ NUEVO: LOGIN GOOGLE DESDE APP MÓVIL
+    La app Android envía el ID Token de Google aquí
+============================================================ */
+router.post("/google-token", loginConGoogleToken);
+
+/* ============================================================
+    LOGIN GOOGLE BARBERO (Web dashboard)
 ============================================================ */
 router.get("/google-barbero", loginGoogleBarbero);
+router.get("/google-barbero/callback", googleCallbackBarbero);
 
 /* ============================================================
     TOKENS

@@ -78,11 +78,67 @@
             app:layout_constraintTop_toBottomOf="@id/tilPassword"
             android:layout_marginTop="24dp" />
 
+        <!-- ✅ DIVISOR CON "O" -->
+        <View
+            android:id="@+id/dividerLeft"
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:background="@color/text_secondary"
+            app:layout_constraintTop_toBottomOf="@id/btnLogin"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/tvOr"
+            android:layout_marginTop="24dp"
+            android:layout_marginEnd="16dp" />
+
+        <TextView
+            android:id="@+id/tvOr"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="O"
+            android:textColor="@color/text_secondary"
+            android:textSize="14sp"
+            app:layout_constraintTop_toTopOf="@id/dividerLeft"
+            app:layout_constraintBottom_toBottomOf="@id/dividerLeft"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <View
+            android:id="@+id/dividerRight"
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:background="@color/text_secondary"
+            app:layout_constraintTop_toBottomOf="@id/btnLogin"
+            app:layout_constraintStart_toEndOf="@id/tvOr"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:layout_marginTop="24dp"
+            android:layout_marginStart="16dp" />
+
+        <!-- ✅ BOTÓN DE GOOGLE SIGN-IN -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnGoogleSignIn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/continue_with_google"
+            android:textColor="@color/text_primary"
+            android:backgroundTint="@color/white"
+            app:strokeColor="@color/text_secondary"
+            app:strokeWidth="1dp"
+            app:icon="@drawable/ic_google"
+            app:iconTint="@null"
+            app:iconGravity="textStart"
+            app:iconPadding="8dp"
+            app:cornerRadius="8dp"
+            android:textAllCaps="false"
+            android:paddingVertical="12dp"
+            app:layout_constraintTop_toBottomOf="@id/dividerLeft"
+            android:layout_marginTop="24dp" />
+
+        <!-- Texto de registro -->
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            app:layout_constraintTop_toBottomOf="@id/btnLogin"
+            app:layout_constraintTop_toBottomOf="@id/btnGoogleSignIn"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             android:layout_marginTop="16dp">

@@ -15,6 +15,10 @@ interface ApiService {
     @POST("auth/registro")
     suspend fun register(@Body request: RegisterRequest): Response<LoginResponse>
 
+    // ✅ NUEVO: Login con Google (envía ID Token)
+    @POST("auth/google-token")
+    suspend fun loginWithGoogle(@Body request: Map<String, String>): Response<LoginResponse>
+
     @GET("auth/me")
     suspend fun getSession(): Response<SessionResponse>
 
@@ -29,11 +33,17 @@ interface ApiService {
     @POST("usuarios/perfil/foto")
     suspend fun uploadFotoPerfil(@Part file: MultipartBody.Part): Response<MessageResponse>
 
+    // ===== TOKENS FCM =====
+    @POST("usuarios/device-token")
+    suspend fun registerDeviceToken(@Body request: Map<String, String>): Response<MessageResponse>
+
+    @HTTP(method = "DELETE", path = "usuarios/device-token", hasBody = true)
+    suspend fun unregisterDeviceToken(@Body request: Map<String, String>): Response<MessageResponse>
+
     // ===== BARBEROS =====
     @GET("barberos")
     suspend fun getBarberos(): Response<List<Barbero>>
 
-    // ✅ ACTUALIZADO: Ahora devuelve Barbero con horarios
     @GET("barberos/{id}")
     suspend fun getBarberoById(@Path("id") barberoId: String): Response<Barbero>
 
@@ -55,11 +65,9 @@ interface ApiService {
         @Query("fecha") fecha: String
     ): Response<HorariosResponse>
 
-    // ✅ NUEVO: Endpoint para que clientes cancelen sus reservas
     @PUT("reservas/cancelar")
     suspend fun cancelarReserva(@Body request: Map<String, String>): Response<MessageResponse>
 
-    // ⚠️ Este endpoint es solo para barberos (cambiar estado: aceptada/rechazada/completada)
     @PUT("reservas/estado")
     suspend fun cambiarEstadoReserva(@Body request: Map<String, String>): Response<Reserva>
 }

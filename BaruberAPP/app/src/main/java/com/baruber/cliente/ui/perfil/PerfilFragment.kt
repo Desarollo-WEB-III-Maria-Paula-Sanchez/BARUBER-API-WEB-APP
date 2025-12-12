@@ -12,6 +12,7 @@ import androidx.lifecycle.lifecycleScope
 import com.baruber.cliente.databinding.FragmentPerfilBinding
 import com.baruber.cliente.network.ApiClient
 import com.baruber.cliente.ui.auth.LoginActivity
+import com.baruber.cliente.utils.FCMHelper       // ✅ AGREGADO
 import com.baruber.cliente.utils.SessionManager
 import com.bumptech.glide.Glide
 import kotlinx.coroutines.launch
@@ -41,16 +42,13 @@ class PerfilFragment : Fragment() {
     }
 
     private fun loadUserData() {
-        // ✅ CAMBIO CRÍTICO: Usar viewLifecycleOwner.lifecycleScope en lugar de lifecycleScope
         viewLifecycleOwner.lifecycleScope.launch {
             try {
-                // ✅ Verificar que el Fragment aún está activo
                 if (!isAdded || _binding == null) return@launch
 
                 val apiService = ApiClient.create(sessionManager)
                 val response = apiService.getPerfil()
 
-                // ✅ Verificar nuevamente después de la llamada de red
                 if (!isAdded || _binding == null) return@launch
 
                 if (response.isSuccessful) {
@@ -60,21 +58,19 @@ class PerfilFragment : Fragment() {
                     binding.tvEmail.text = usuario.email
                     binding.tvPhone.text = usuario.telefono ?: "Sin teléfono"
 
-                    // Cargar foto
+                    // FOTO DE PERFIL
                     if (!usuario.fotoUrl.isNullOrEmpty()) {
                         Glide.with(requireContext())
                             .load(usuario.fotoUrl)
                             .into(binding.ivProfile)
                     }
 
-                    // Guardar en sesión
+                    // GUARDAR EN SESIÓN
                     sessionManager.saveUserData(usuario)
                 }
             } catch (e: Exception) {
-                // ✅ Verificar antes de actualizar UI
                 if (!isAdded || _binding == null) return@launch
 
-                // Usar datos guardados
                 binding.tvName.text = sessionManager.getUserName() ?: "Usuario"
                 binding.tvEmail.text = sessionManager.getUserEmail() ?: ""
 
@@ -110,13 +106,27 @@ class PerfilFragment : Fragment() {
             .show()
     }
 
+    // 🔥🔥🔥 AQUÍ ESTÁ EL LOGOUT ACTUALIZADO CON FCM 🔥🔥🔥
     private fun logout() {
-        sessionManager.clearSession()
+        viewLifecycleOwner.lifecycleScope.launch {
 
-        val intent = Intent(requireContext(), LoginActivity::class.java)
-        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        startActivity(intent)
-        requireActivity().finish()
+            // ✅ DESACTIVAR TOKEN EN EL BACKEND
+            try {
+                FCMHelper.desactivarToken(sessionManager)
+            } catch (_: Exception) {
+                // Se ignora si falla, no bloquea logout
+            }
+
+            // 🔥 BORRAR TODO LOCAL
+            sessionManager.clearSession()
+
+            // 🔄 IR A LOGIN
+            val intent = Intent(requireContext(), LoginActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            startActivity(intent)
+
+            requireActivity().finish()
+        }
     }
 
     override fun onResume() {

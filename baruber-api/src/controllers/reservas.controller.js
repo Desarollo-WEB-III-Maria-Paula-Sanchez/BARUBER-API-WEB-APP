@@ -1,16 +1,25 @@
 import { supabase } from "../config/supabase.js";
 import { supabaseAdmin } from "../utils/supabaseAdmin.js";
+import { enviarNotificacion } from "../utils/notificaciones.js";
 
 /* ============================================================
-   FUNCIONES AUXILIARES DE VALIDACIÓN
-   ============================================================ */
+  FUNCIONES AUXILIARES DE VALIDACIÓN
+  ============================================================ */
 
-// Validar que la fecha/hora no sea en el pasado
+// Validar que la fecha/hora no sea en el pasado (usando hora real de Costa Rica)
 const validarFechaFutura = (fecha, hora) => {
+  // Obtener fecha/hora actual en Costa Rica
   const ahora = new Date();
+  const costaRicaTime = new Date(
+    ahora.toLocaleString('en-US', { timeZone: 'America/Costa_Rica' })
+  );
+
+  // Fecha/hora de la reserva en hora local del servidor (pero compararemos contra CR)
   const fechaReserva = new Date(`${fecha}T${hora}`);
-  return fechaReserva > ahora;
+
+  return fechaReserva > costaRicaTime;
 };
+
 
 // Validar que el horario esté dentro del horario laboral del barbero
 const validarHorarioLaboral = async (barber_id, fecha, hora, duracion) => {
@@ -97,8 +106,8 @@ const validarDisponibilidad = async (barber_id, fecha, hora, duracion, reservaId
 };
 
 /* ============================================================
-   Crear reserva – Cliente
-   ============================================================ */
+  Crear reserva – Cliente
+  ============================================================ */
 export const crearReserva = async (req, res) => {
   const cliente_id = req.user.id;
   const { barber_id, servicio_id, fecha, hora } = req.body;
@@ -167,8 +176,8 @@ export const crearReserva = async (req, res) => {
 };
 
 /* ============================================================
-   Cambiar estado – Barbero
-   ============================================================ */
+  Cambiar estado – Barbero
+  ============================================================ */
 export const cambiarEstado = async (req, res) => {
   const barber_id = req.user.id;
   const { reserva_id, estado } = req.body;
@@ -258,10 +267,42 @@ export const cambiarEstado = async (req, res) => {
       .update({ estado })
       .eq("id", reserva_id)
       .eq("barber_id", barber_id)
-      .select()
+      .select(`
+        *,
+        servicios(nombre),
+        usuarios!reservas_cliente_id_fkey(nombre)
+      `)
       .single();
 
     if (error) return res.status(400).json(error);
+
+    // ✅ ENVIAR NOTIFICACIÓN AL CLIENTE
+    if (estado === "aceptada" || estado === "rechazada") {
+      const titulo = estado === "aceptada" 
+        ? "✅ Reserva Aceptada" 
+        : "❌ Reserva Rechazada";
+      
+      const mensaje = estado === "aceptada"
+        ? `Tu reserva de ${data.servicios?.nombre} ha sido aceptada`
+        : `Tu reserva de ${data.servicios?.nombre} ha sido rechazada`;
+
+      // Enviar notificación (no bloqueante)
+      enviarNotificacion(
+        data.cliente_id,
+        titulo,
+        mensaje,
+        {
+          reserva_id: data.id,
+          estado: data.estado,
+          type: "reserva_update",
+        }
+      ).catch((err) => {
+        console.error("Error enviando notificación:", err);
+        // No retornar error, la reserva ya se actualizó correctamente
+      });
+
+      console.log(`📨 Notificación enviada al cliente ${data.cliente_id}`);
+    }
 
     return res.json(data);
 
@@ -272,8 +313,8 @@ export const cambiarEstado = async (req, res) => {
 };
 
 /* ============================================================
-   Obtener reservas del cliente
-   ============================================================ */
+  Obtener reservas del cliente
+  ============================================================ */
 export const obtenerReservasCliente = async (req, res) => {
   const cliente_id = req.user.id;
 
@@ -294,8 +335,8 @@ export const obtenerReservasCliente = async (req, res) => {
 };
 
 /* ============================================================
-   Obtener reservas del barbero autenticado
-   ============================================================ */
+  Obtener reservas del barbero autenticado
+  ============================================================ */
 export const obtenerReservasBarbero = async (req, res) => {
   const barber_id = req.user.id;
 
@@ -316,8 +357,8 @@ export const obtenerReservasBarbero = async (req, res) => {
 };
 
 /* ============================================================
-   Obtener una reserva por ID
-   ============================================================ */
+  Obtener una reserva por ID
+  ============================================================ */
 export const obtenerReservaPorId = async (req, res) => {
   const barber_id = req.user.id;
   const { id } = req.params;
@@ -339,18 +380,22 @@ export const obtenerReservaPorId = async (req, res) => {
 };
 
 /* ============================================================
-   Obtener horarios disponibles para un barbero y servicio
-   ============================================================ */
+  Obtener horarios disponibles para un barbero y servicio
+  ============================================================ */
 export const obtenerHorariosDisponibles = async (req, res) => {
   const { barber_id, servicio_id, fecha } = req.query;
 
   try {
-    // 1. Validar que la fecha no sea en el pasado
-    const fechaObj = new Date(fecha + 'T00:00:00');
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
+    // 1. Validar que la fecha no sea en el pasado (usando timezone Costa Rica)
+      const fechaObj = new Date(fecha + 'T00:00:00');
 
-    if (fechaObj < hoy) {
+// Obtener fecha actual en Costa Rica
+    const ahora = new Date();
+    const costaRicaTime = new Date(ahora.toLocaleString('en-US', { timeZone: 'America/Costa_Rica' }));
+    const hoyCostaRica = new Date(costaRicaTime);
+    hoyCostaRica.setHours(0, 0, 0, 0);
+
+    if (fechaObj < hoyCostaRica) {
       return res.status(400).json({ error: "No se puede consultar fechas pasadas" });
     }
 
@@ -425,11 +470,15 @@ export const obtenerHorariosDisponibles = async (req, res) => {
         }
       }
 
-      // Si es hoy, no mostrar horas que ya pasaron
-      if (fecha === new Date().toISOString().split('T')[0]) {
+      // ⭐ CORREGIDO: Si es hoy, no mostrar horas que ya pasaron (con timezone Costa Rica)
+      const hoyCR = costaRicaTime.toISOString().split("T")[0];
+      if (fecha === hoyCR) {
+        // Obtener hora actual en Costa Rica (UTC-6)
         const ahora = new Date();
-        const horaActual = ahora.getHours() * 60 + ahora.getMinutes();
-        if (minutosActual <= horaActual) {
+        const costaRicaTime = new Date(ahora.toLocaleString('en-US', { timeZone: 'America/Costa_Rica' }));
+        const horaActualCR = costaRicaTime.getHours() * 60 + costaRicaTime.getMinutes();
+        
+        if (minutosActual <= horaActualCR) {
           disponible = false;
         }
       }
@@ -453,8 +502,8 @@ export const obtenerHorariosDisponibles = async (req, res) => {
 };
 
 /* ============================================================
-   Reagendar reserva — Barbero
-   ============================================================ */
+  Reagendar reserva – Barbero
+  ============================================================ */
 export const reagendarReserva = async (req, res) => {
   const barber_id = req.user.id;
   const { reserva_id, nueva_fecha, nueva_hora } = req.body;
@@ -542,8 +591,8 @@ export const reagendarReserva = async (req, res) => {
 };
 
 /* ============================================================
-   Cancelar reserva — Cliente
-   ============================================================ */
+  Cancelar reserva – Cliente
+  ============================================================ */
 export const cancelarReservaCliente = async (req, res) => {
   const cliente_id = req.user.id;
   const { reserva_id } = req.body;
